@@ -148,15 +148,17 @@ pub async fn start_server(port_override: Option<u16>, host_override: Option<Stri
     // The config is loaded at boot whether or not setup has completed, so its webserver
     // section applies to Explore Mode and the setup screen too. Only a missing config
     // file falls back to the defaults.
-    let config_bind = crate::paths::get_config_path().exists().then(|| {
-        with_config(|cfg| {
-            (
-                cfg.webserver.port,
-                cfg.webserver.host.clone(),
-                cfg.webserver.auth_enabled,
-            )
-        })
-    });
+    // Configuration is initialized before the service manager starts, including
+    // deployments that bootstrap authentication from environment secrets and do
+    // not yet have a config.toml on the ephemeral filesystem. Always read the
+    // in-memory config; checking for a file here would discard that secure setup.
+    let config_bind = Some(with_config(|cfg| {
+        (
+            cfg.webserver.port,
+            cfg.webserver.host.clone(),
+            cfg.webserver.auth_enabled,
+        )
+    }));
     let auth_enabled = config_bind
         .as_ref()
         .is_some_and(|(_, _, auth_enabled)| *auth_enabled);
