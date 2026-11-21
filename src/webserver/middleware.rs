@@ -226,6 +226,10 @@ pub async fn initialization_gate(request: Request, next: Next) -> Response {
 /// Paths `initialization_gate` admits before setup completes.
 fn allowed_before_setup(path: &str) -> bool {
     // Initialization endpoints and health check
+    if path == "/api/auth/login" {
+        return true;
+    }
+
     if path.starts_with("/api/initialization")
         || path.starts_with("/api/system/bootstrap")
         || path == "/api/health"
