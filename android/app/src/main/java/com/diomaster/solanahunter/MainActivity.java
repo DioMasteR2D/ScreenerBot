@@ -151,6 +151,58 @@ public class MainActivity extends Activity {
     }
 
     private void askPasswordAndConnect(String url) {
+        // Reuse the server-issued session cookie saved by WebView. Ask for the
+        // password again only when the server says that session has expired.
+        String savedCookie = CookieManager.getInstance().getCookie(url);
+        if (savedCookie != null && !savedCookie.isEmpty()) {
+            verifySavedSession(url, savedCookie);
+            return;
+        }
+        showPasswordDialog(url);
+    }
+
+    private void verifySavedSession(String url, String savedCookie) {
+        new Thread(() -> {
+            boolean valid = false;
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(url + "/api/auth/status").openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("Accept", "application/json");
+                connection.setRequestProperty("Cookie", savedCookie);
+                int status = connection.getResponseCode();
+                InputStream stream = status >= 200 && status < 300
+                        ? connection.getInputStream() : connection.getErrorStream();
+                StringBuilder body = new StringBuilder();
+                if (stream != null) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream,
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) body.append(line);
+                    }
+                }
+                JSONObject response = new JSONObject(body.toString());
+                JSONObject data = response.optJSONObject("data");
+                valid = status >= 200 && status < 300
+                        && (response.optBoolean("authenticated", false)
+                        || (data != null && data.optBoolean("authenticated", false)));
+            } catch (Exception ignored) {
+                valid = false;
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+            final boolean sessionValid = valid;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (sessionValid) connectTo(url);
+                else showPasswordDialog(url);
+            });
+        }).start();
+    }
+
+    private void showPasswordDialog(String url) {
         EditText password = new EditText(this);
         password.setSingleLine(true);
         password.setInputType(android.text.InputType.TYPE_CLASS_TEXT
