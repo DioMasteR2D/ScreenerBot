@@ -80,7 +80,7 @@ pub async fn boot() {
                     cfg.webserver.auth_password_salt = salt;
                     cfg.webserver.auth_password_hash = hash;
                 },
-                true,
+                false, // Render's filesystem is ephemeral; keep the secret-derived auth only in memory.
             ) {
                 eprintln!("Dashboard authentication setup failed: {error}");
                 std::process::exit(1);
