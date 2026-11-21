@@ -22,6 +22,13 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class MainActivity extends Activity {
     private static final String PREFS = "hunter";
@@ -60,7 +67,7 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(BG);
         serverUrl = prefs().getString(SERVER, "");
         if (serverUrl.isEmpty()) showHome();
-        else connectTo(serverUrl);
+        else askPasswordAndConnect(serverUrl);
     }
 
     private SharedPreferences prefs() {
@@ -139,8 +146,105 @@ public class MainActivity extends Activity {
                 }
                 serverUrl = value.replaceAll("/+$", "");
                 prefs().edit().putString(SERVER, serverUrl).apply();
-                connectTo(serverUrl);
+                askPasswordAndConnect(serverUrl);
             }).show();
+    }
+
+    private void askPasswordAndConnect(String url) {
+        EditText password = new EditText(this);
+        password.setSingleLine(true);
+        password.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setHint("Κωδικός πρόσβασης");
+        password.setPadding(24, 18, 24, 18);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+            .setTitle("SOLANA HUNTER — Είσοδος")
+            .setMessage("Βάλε τον κωδικό του dashboard για ασφαλή σύνδεση.")
+            .setView(password)
+            .setCancelable(false)
+            .setNegativeButton("Ρυθμίσεις", (d, w) -> askServer())
+            .setPositiveButton("ΣΥΝΔΕΣΗ", null)
+            .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String entered = password.getText().toString();
+            if (entered.isEmpty()) {
+                password.setError("Βάλε τον κωδικό");
+                return;
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+            authenticate(url, entered, dialog);
+        }));
+        dialog.show();
+    }
+
+    private void authenticate(String url, String password, AlertDialog dialog) {
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            String error = "Δεν ήταν δυνατή η σύνδεση.";
+            boolean authenticated = false;
+            String cookie = null;
+            try {
+                URL endpoint = new URL(url + "/api/auth/login");
+                connection = (HttpURLConnection) endpoint.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(15000);
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                connection.setRequestProperty("Accept", "application/json");
+                JSONObject payload = new JSONObject();
+                payload.put("password", password);
+                try (OutputStream out = connection.getOutputStream()) {
+                    out.write(payload.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+                int status = connection.getResponseCode();
+                cookie = connection.getHeaderField("Set-Cookie");
+                InputStream stream = status >= 200 && status < 400
+                        ? connection.getInputStream() : connection.getErrorStream();
+                StringBuilder body = new StringBuilder();
+                if (stream != null) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream,
+                            java.nio.charset.StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) body.append(line);
+                    }
+                }
+                JSONObject response = new JSONObject(body.toString());
+                authenticated = status >= 200 && status < 300
+                        && response.optBoolean("success", false) && cookie != null;
+                if (!authenticated) {
+                    error = response.optString("message",
+                            response.optString("error", "Ο κωδικός δεν έγινε δεκτός."));
+                }
+            } catch (Exception e) {
+                error = "Δεν έγινε σύνδεση με τον server. Έλεγξε ότι το dashboard είναι ενεργό.";
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+
+            final boolean ok = authenticated;
+            final String message = error;
+            final String sessionCookie = cookie;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (ok) {
+                    CookieManager manager = CookieManager.getInstance();
+                    manager.setAcceptCookie(true);
+                    manager.setCookie(url, sessionCookie);
+                    manager.flush();
+                    dialog.dismiss();
+                    connectTo(url);
+                } else {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                    new AlertDialog.Builder(this)
+                        .setTitle("Αποτυχία εισόδου")
+                        .setMessage(message)
+                        .setPositiveButton("OK", null)
+                        .show();
+                }
+            });
+        }).start();
     }
 
     private void connectTo(String url) {
