@@ -61,6 +61,34 @@ pub async fn boot() {
     }
     logger::info(LogTag::System, "Configuration loaded successfully");
 
+    // Render deployment bootstrap: keep the dashboard password in the platform's
+    // secret environment, never in the repository. Rebuild the salted hash on each
+    // boot because the free instance filesystem is ephemeral.
+    if let Ok(password) = std::env::var("SCREENERBOT_DASHBOARD_PASSWORD") {
+        if !password.is_empty() {
+            let salt = crate::secure_storage::generate_password_salt();
+            let hash = match crate::secure_storage::hash_password(&password, &salt) {
+                Ok(hash) => hash,
+                Err(error) => {
+                    eprintln!("Dashboard password bootstrap failed: {error}");
+                    std::process::exit(1);
+                }
+            };
+            if let Err(error) = crate::config::update_config_section(
+                |cfg| {
+                    cfg.webserver.auth_enabled = true;
+                    cfg.webserver.auth_password_salt = salt;
+                    cfg.webserver.auth_password_hash = hash;
+                },
+                true,
+            ) {
+                eprintln!("Dashboard authentication setup failed: {error}");
+                std::process::exit(1);
+            }
+            logger::info(LogTag::System, "Dashboard password authentication enabled from secure environment");
+        }
+    }
+
     // Detect and log the system/network proxy once (used by HTTP, RPC and WS).
     // Must run AFTER config load so `[network] proxy` is available.
     crate::net::log_detected_proxy();
