@@ -61,7 +61,7 @@ pub async fn boot() {
     }
     logger::info(LogTag::System, "Configuration loaded successfully");
 
-    // Render deployment bootstrap: keep the dashboard password in the platform's
+    // Render deployment bootstrap (refresh): keep the dashboard password in the platform's
     // secret environment, never in the repository. Rebuild the salted hash on each
     // boot because the free instance filesystem is ephemeral.
     if let Ok(password) = std::env::var("SCREENERBOT_DASHBOARD_PASSWORD") {
