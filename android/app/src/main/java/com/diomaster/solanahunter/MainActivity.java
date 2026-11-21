@@ -65,9 +65,16 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
-        serverUrl = prefs().getString(SERVER, "");
-        if (serverUrl.isEmpty()) showHome();
-        else askPasswordAndConnect(serverUrl);
+        // Open the existing ScreenerBot dashboard directly inside the app.
+        // Let the dashboard handle its own login/session instead of duplicating
+        // the server authentication flow in native Android code.
+        serverUrl = prefs().getString(SERVER, "https://solana-hunter-screenerbot.onrender.com");
+        if (serverUrl == null || serverUrl.trim().isEmpty()) {
+            serverUrl = "https://solana-hunter-screenerbot.onrender.com";
+        }
+        serverUrl = serverUrl.replaceAll("/+$", "");
+        prefs().edit().putString(SERVER, serverUrl).apply();
+        connectTo(serverUrl);
     }
 
     private SharedPreferences prefs() {
