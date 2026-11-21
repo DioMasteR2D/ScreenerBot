@@ -479,17 +479,17 @@ pub async fn test_port_binding(
         &format!("[TEST-BIND] Initialization complete: {init_complete}"),
     );
 
-    let (config_port, config_host, auth_enabled) = if init_complete {
-        with_config(|cfg| {
-            (
-                cfg.webserver.port,
-                cfg.webserver.host.clone(),
-                cfg.webserver.auth_enabled,
-            )
-        })
-    } else {
-        (0, String::new(), false)
-    };
+    // load_config() and the Render environment-secret bootstrap run before
+    // run_bot() starts this pre-flight check. Read the loaded in-memory config
+    // even while first-time initialization is incomplete, otherwise a valid
+    // environment-derived password is ignored and public binds are rejected.
+    let (config_port, config_host, auth_enabled) = with_config(|cfg| {
+        (
+            cfg.webserver.port,
+            cfg.webserver.host.clone(),
+            cfg.webserver.auth_enabled,
+        )
+    });
 
     logger::debug(
         LogTag::Webserver,
