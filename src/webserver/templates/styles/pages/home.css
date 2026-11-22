@@ -913,3 +913,147 @@
     animation: none;
   }
 }
+
+
+/* SOLANA HUNTER — mobile-first dashboard refinement.
+   Presentation only: preserve all existing data bindings, controls and sections. */
+@media (width <= 640px) {
+  .home-dashboard {
+    --home-padding: 0.75rem;
+    gap: 0;
+    background:
+      radial-gradient(ellipse at 92% 0%, rgb(124 58 237 / 12%), transparent 42%),
+      radial-gradient(ellipse at 0% 24%, rgb(6 182 212 / 9%), transparent 38%),
+      var(--bg-primary);
+  }
+
+  .portfolio-overview {
+    margin: 0.55rem 0.65rem 0.75rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--primary-color) 38%, var(--border-color));
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgb(6 182 212 / 9%), rgb(124 58 237 / 12%)), var(--bg-card);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 18%);
+  }
+
+  .portfolio-headline {
+    min-height: 112px;
+    padding: 1rem;
+  }
+
+  .hero-label {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+  }
+
+  .hero-balance {
+    font-size: clamp(1.9rem, 8vw, 2.5rem);
+  }
+
+  .hero-trend {
+    max-width: 34%;
+  }
+
+  .hero-spark {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .portfolio-stats {
+    border-top: 1px solid var(--border-color);
+    background: rgb(15 23 42 / 20%);
+  }
+
+  .portfolio-stat {
+    min-height: 76px;
+    padding: 0.75rem;
+  }
+
+  .hero-stat-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.035em;
+    white-space: normal;
+  }
+
+  .hero-stat-value {
+    font-size: 1.05rem;
+  }
+
+  .home-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 0 0.65rem 1rem;
+  }
+
+  .calendar-workspace,
+  .operations-section,
+  .home-status,
+  .home-operations {
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgb(30 41 59 / 42%), rgb(15 23 42 / 22%)), var(--bg-card);
+    box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+  }
+
+  .calendar-workspace {
+    padding: 0.85rem;
+  }
+
+  .home-status {
+    overflow: hidden;
+  }
+
+  .status-section {
+    padding: 0.8rem 0.9rem;
+  }
+
+  .status-section + .status-section {
+    border-top: 1px solid var(--border-color);
+  }
+
+  .home-operations {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .exposure-section {
+    border: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .pipeline-section {
+    border: 0;
+  }
+
+  .operations-section {
+    padding: 0.85rem 0.9rem;
+  }
+
+  .workspace-header {
+    min-height: 2rem;
+    height: auto;
+    margin-bottom: 0.65rem;
+  }
+
+  .workspace-header h2 {
+    font-size: 0.78rem;
+    letter-spacing: 0.025em;
+  }
+
+  .home-ledger-row {
+    min-height: 2.55rem;
+  }
+
+  .position-value,
+  .pipeline-metric strong {
+    font-size: 0.9rem;
+  }
+
+  .pipeline-grid .pipeline-metric {
+    padding-block: 0.75rem;
+  }
+}
