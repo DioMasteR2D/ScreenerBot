@@ -32,6 +32,7 @@ use reqwest::Client;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use tokio::sync::Mutex;
 
 // ============================================================================
 // API CONFIGURATION - Hardcoded for DexScreener API
@@ -86,6 +87,10 @@ pub struct DexScreenerClient {
     pub(crate) limiter_token_orders: RateLimiter,
     pub(crate) limiter_token_info: RateLimiter,
     pub(crate) limiter_supported_chains: RateLimiter,
+    // A shared cap and cooldown across every DexScreener endpoint. Per-endpoint
+    // limiters alone can collectively exceed the provider's IP-level allowance.
+    limiter_global: RateLimiter,
+    rate_limit_until: Arc<Mutex<Option<Instant>>>,
 }
 
 impl DexScreenerClient {
@@ -114,6 +119,8 @@ impl DexScreenerClient {
             limiter_token_orders: RateLimiter::new(RATE_LIMIT_TOKEN_ORDERS_PER_MINUTE),
             limiter_token_info: RateLimiter::new(RATE_LIMIT_TOKEN_INFO_PER_MINUTE),
             limiter_supported_chains: RateLimiter::new(RATE_LIMIT_SUPPORTED_CHAINS_PER_MINUTE),
+            limiter_global: RateLimiter::new(300),
+            rate_limit_until: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -136,6 +143,34 @@ impl DexScreenerClient {
         }
     }
 
+    async fn wait_for_rate_limit(&self) {
+        loop {
+            let wait = {
+                let until = self.rate_limit_until.lock().await;
+                until.map(|deadline| deadline.saturating_duration_since(Instant::now()))
+            };
+            match wait {
+                Some(duration) if !duration.is_zero() => tokio::time::sleep(duration).await,
+                _ => break,
+            }
+        }
+    }
+
+    async fn note_rate_limit(&self, response: &reqwest::Response) {
+        let retry_after = response
+            .headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.parse::<u64>().ok())
+            .unwrap_or(30)
+            .clamp(1, 120);
+        let until = Instant::now() + Duration::from_secs(retry_after);
+        let mut current = self.rate_limit_until.lock().await;
+        if current.map(|deadline| deadline < until).unwrap_or(true) {
+            *current = Some(until);
+        }
+    }
+
     pub(crate) async fn execute_request(
         &self,
         endpoint: &str,
@@ -145,11 +180,21 @@ impl DexScreenerClient {
         self.ensure_enabled(endpoint)?;
 
         let guard = limiter.acquire().await?;
+        // Serialize requests across endpoints and enforce one aggregate provider budget.
+        let global_guard = self.limiter_global.acquire().await?;
+        self.wait_for_rate_limit().await;
 
         let start = Instant::now();
         let response_result = builder.timeout(self.timeout).send().await;
-        drop(guard);
         let elapsed = start.elapsed().as_millis() as f64;
+
+        if let Ok(response) = &response_result {
+            if response.status().as_u16() == 429 {
+                self.note_rate_limit(response).await;
+            }
+        }
+        drop(global_guard);
+        drop(guard);
 
         match response_result {
             Ok(response) => Ok((response, elapsed)),
