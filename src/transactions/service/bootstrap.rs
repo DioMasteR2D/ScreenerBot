@@ -327,24 +327,39 @@ pub async fn perform_initial_transaction_bootstrap(
     // one SQLite query for every historical signature.
     let persistent_known = if let Some(db) = transaction_db.as_ref() {
         match db.get_known_signatures_batch(subject.clone(), &all_signatures).await {
-            Ok(known) => known,
+            Ok(known) => Some(known),
             Err(e) => {
                 logger::warning(
                     LogTag::Transactions,
                     &format!("Failed to batch-query known signatures: {e}; falling back to individual checks"),
                 );
                 stats.errors += 1;
-                std::collections::HashSet::new()
+                None
             }
         }
     } else {
-        std::collections::HashSet::new()
+        Some(std::collections::HashSet::new())
     };
 
     // Filter out already known signatures using the in-memory cache and batch result.
     for signature in &all_signatures {
-        let signature_is_known = is_signature_known_globally(subject.clone(), signature).await
-            || persistent_known.contains(signature);
+        let mut signature_is_known = is_signature_known_globally(subject.clone(), signature).await;
+        if !signature_is_known {
+            if let Some(known) = persistent_known.as_ref() {
+                signature_is_known = known.contains(signature);
+            } else if let Some(db) = transaction_db.as_ref() {
+                match db.is_signature_known(subject.clone(), signature).await {
+                    Ok(known) => signature_is_known = known,
+                    Err(e) => {
+                        logger::warning(
+                            LogTag::Transactions,
+                            &format!("Failed to query known status for {signature}: {e}"),
+                        );
+                        stats.errors += 1;
+                    }
+                }
+            }
+        }
 
         if signature_is_known {
             stats.known_signatures_skipped += 1;
