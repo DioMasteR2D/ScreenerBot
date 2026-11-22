@@ -47,6 +47,22 @@ pub async fn check_endpoints_usable(endpoint_names: &[&str]) -> Option<String> {
     }
 }
 
+/// Check that at least one configured market-data provider is not confirmed offline.
+/// DexScreener and GeckoTerminal provide interchangeable market data; requiring both
+/// makes every strategy entry fail when either provider is rate-limited. The market
+/// filter still validates each token against the provider that supplied its data, and
+/// the transaction executors retain their own fail-closed RPC checks.
+pub async fn check_market_data_provider_usable() -> Option<String> {
+    let dexscreener_offline = is_endpoint_offline("dexscreener").await;
+    let geckoterminal_offline = is_endpoint_offline("geckoterminal").await;
+
+    if dexscreener_offline && geckoterminal_offline {
+        Some("dexscreener, geckoterminal".to_owned())
+    } else {
+        None
+    }
+}
+
 /// Check if specified endpoints are healthy
 /// Returns None if all healthy, Some(endpoint_names) if any unhealthy
 pub async fn check_endpoints_healthy(endpoint_names: &[&str]) -> Option<String> {
