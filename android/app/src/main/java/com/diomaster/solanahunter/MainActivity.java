@@ -312,25 +312,26 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
 
+        // Compact native connection strip. The dashboard owns the SOLANA HUNTER
+        // branding and navigation, so do not duplicate a second app header above it.
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(16, 8, 16, 8);
-        bar.setBackgroundColor(PANEL);
+        bar.setPadding(14, 2, 8, 2);
+        bar.setBackgroundColor(BG);
 
-        TextView brand = label("SOLANA HUNTER", 16, Color.WHITE);
-        bar.addView(brand, new LinearLayout.LayoutParams(0, 48, 1));
-
-        Button home = new Button(this);
-        home.setText("⌂");
-        home.setContentDescription("Αρχική");
-        home.setOnClickListener(v -> showHome());
-        bar.addView(home, new LinearLayout.LayoutParams(52, 48));
+        TextView session = label("●  SECURE SESSION", 10, Color.rgb(52, 211, 153));
+        session.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+        session.setLetterSpacing(0.08f);
+        bar.addView(session, new LinearLayout.LayoutParams(0, 34, 1));
 
         Button settings = new Button(this);
         settings.setText("⚙");
+        settings.setTextColor(Color.WHITE);
         settings.setContentDescription("Ρυθμίσεις σύνδεσης");
+        settings.setMinWidth(44);
+        settings.setMinimumHeight(36);
         settings.setOnClickListener(v -> askServer());
-        bar.addView(settings, new LinearLayout.LayoutParams(52, 48));
+        bar.addView(settings, new LinearLayout.LayoutParams(48, 38));
         root.addView(bar);
 
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
