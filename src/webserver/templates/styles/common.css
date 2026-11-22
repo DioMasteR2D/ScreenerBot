@@ -232,3 +232,100 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+
+/* ==========================================================================
+   SOLANA HUNTER — shared interface system across every dashboard section.
+   Visual-only overrides: no IDs, routes, form names, data hooks or actions change.
+   ========================================================================== */
+:root {
+  --hunter-card-radius: 16px;
+  --hunter-control-radius: 10px;
+}
+.app-main { background: var(--bg-primary); }
+.content { background: var(--bg-primary); }
+.content > .page-container {
+  padding: clamp(10px, 1.6vw, 22px);
+  gap: 14px;
+  scrollbar-gutter: stable;
+}
+.page-container > h1,
+.page-container > .page-header h1,
+.page-container > .page-title {
+  color: var(--text-primary);
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -.025em;
+}
+.page-container :is(.page-header, .page-toolbar, .section-header) {
+  gap: 12px;
+}
+.page-container :is(.card, .panel, .section-card, .settings-section, .config-section,
+  .table-container, .data-table-container, .dialog-content, .workspace-panel) {
+  border-radius: var(--hunter-card-radius);
+}
+.page-container :is(.card, .panel, .section-card, .settings-section, .config-section,
+  .workspace-panel) {
+  border-color: color-mix(in srgb, var(--border-color) 82%, transparent);
+  box-shadow: 0 7px 22px rgb(0 0 0 / 7%);
+}
+.page-container :is(h2, .section-title, .card-title) {
+  color: var(--text-primary);
+  font-weight: 750;
+  letter-spacing: -.012em;
+}
+.page-container :is(.btn, button.btn, .btn-icon, input, select, textarea, .custom-select) {
+  border-radius: var(--hunter-control-radius);
+}
+.page-container :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: 40px;
+}
+.page-container :is(.btn, button.btn) { min-height: 38px; font-weight: 650; }
+.page-container :is(.btn-primary, .btn-success) {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 18%, transparent);
+}
+.page-container :is(table, .data-table) { border-collapse: separate; border-spacing: 0; }
+.page-container :is(th, .table-header) {
+  color: var(--text-secondary);
+  font-size: .68rem;
+  font-weight: 750;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+.page-container :is(td, th) { padding-block: 10px; }
+.page-container :is(tr:hover td, .table-row:hover) {
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
+}
+.page-container :is(.badge, .status-badge) { border-radius: 999px; }
+.page-container :focus-visible,
+.modern-header :focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+@media (max-width: 799px) {
+  .content > .page-container {
+    padding: 10px 9px calc(78px + env(safe-area-inset-bottom));
+    gap: 11px;
+  }
+  .page-container :is(.page-header, .page-toolbar, .section-header) {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .page-container :is(.card, .panel, .section-card, .settings-section, .config-section,
+    .workspace-panel) { border-radius: 14px; }
+  .page-container :is(.table-container, .data-table-container) {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page-container :is(button, .btn, .btn-icon, a[role="button"]) {
+    touch-action: manipulation;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-container *, .modern-header * {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
