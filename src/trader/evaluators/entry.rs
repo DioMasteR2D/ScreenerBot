@@ -80,9 +80,17 @@ pub async fn evaluate_entry_for_token(
         return Ok(EntryDecisions::default());
     }
 
+    // Market data can come from either DexScreener or GeckoTerminal. Do not make
+    // DexScreener a single point of failure; the market filter validates the provider
+    // actually attached to each token. Block only when both market-data providers are
+    // confirmed offline. RPC remains mandatory in admission and in the buy executor.
+    if let Some(unhealthy) = crate::connectivity::check_market_data_provider_usable().await {
+        return Err(crate::trader::Error::UnhealthyEndpoints { detail: unhealthy });
+    }
+
     let admitted = match admit_modes(
         token_mint,
-        &["rpc", "dexscreener", "rugcheck"],
+        &["rpc", "rugcheck"],
         cycle,
         books,
         evaluators::strategies::strategy_entry_size_native(),
