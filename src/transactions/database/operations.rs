@@ -12,6 +12,7 @@ use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use std::path::Path;
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::chains::ChainId;
@@ -181,6 +182,47 @@ impl TransactionDatabase {
         .map_err(crate::errors::DatabaseError::from)?;
 
         Ok(())
+    }
+
+    /// Return the signatures already present in the known-signatures table in bounded SQL batches.
+    /// This avoids one SQLite connection/query round-trip per historical signature during bootstrap.
+    pub async fn get_known_signatures_batch(
+        &self,
+        subject: Subject,
+        signatures: &[String],
+    ) -> Result<HashSet<String>, Error> {
+        const SQL_BATCH_SIZE: usize = 500;
+        let chain_id = self.require_subject_chain(&subject)?.to_owned();
+        let wallet_address = subject.address();
+        let mut known = HashSet::new();
+
+        for batch in signatures.chunks(SQL_BATCH_SIZE) {
+            if batch.is_empty() {
+                continue;
+            }
+            let placeholders = (1..=batch.len())
+                .map(|index| format!("?{index}"))
+                .collect::<Vec<_>>()
+                .join(",");
+            let sql = format!(
+                "SELECT signature FROM known_signatures WHERE chain_id = ?{} AND wallet_address = ?{} AND signature IN ({})",
+                batch.len() + 1,
+                batch.len() + 2,
+                placeholders
+            );
+            let mut values = batch.iter().map(|signature| signature.as_str()).collect::<Vec<_>>();
+            values.push(&chain_id);
+            values.push(&wallet_address);
+            let conn = self.get_connection()?;
+            let mut statement = conn.prepare(&sql).map_err(crate::errors::DatabaseError::from)?;
+            let rows = statement
+                .query_map(rusqlite::params_from_iter(values), |row| row.get::<_, String>(0))
+                .map_err(crate::errors::DatabaseError::from)?;
+            for row in rows {
+                known.insert(row.map_err(crate::errors::DatabaseError::from)?);
+            }
+        }
+        Ok(known)
     }
 
     /// Get count of known signatures, for the given subject
