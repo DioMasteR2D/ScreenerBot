@@ -61,10 +61,13 @@ impl EndpointMonitor for DexScreenerMonitor {
             }
         };
 
-        // Use latest/dex/tokens endpoint with a known good token as health check
+        // Probe the same documented batch-token API used by the market-data
+        // pipeline. This avoids declaring DexScreener unavailable based on a
+        // different legacy endpoint while the active /tokens/v1 route works.
         let url = format!(
-            "{}/latest/dex/tokens/{}",
+            "{}/tokens/v1/{}/{}",
             Self::BASE_URL,
+            crate::apis::dexscreener::default_chain_id(),
             crate::chains::adapter().native_asset_address()
         );
         let start = Instant::now();
