@@ -65,16 +65,24 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         getWindow().setStatusBarColor(BG);
         getWindow().setNavigationBarColor(BG);
-        // Open the existing ScreenerBot dashboard directly inside the app.
-        // Let the dashboard handle its own login/session instead of duplicating
-        // the server authentication flow in native Android code.
-        serverUrl = prefs().getString(SERVER, "https://solana-hunter-screenerbot.onrender.com");
-        if (serverUrl == null || serverUrl.trim().isEmpty()) {
-            serverUrl = "https://solana-hunter-screenerbot.onrender.com";
+        // Run the bundled Rust engine locally in Android private storage.
+        serverUrl = "http://127.0.0.1:8080";
+        try {
+            if (!NativeCore.start(getFilesDir().getAbsolutePath() + "/screenerbot")) {
+                showNativeCoreError();
+                return;
+            }
+            new android.os.Handler(getMainLooper()).postDelayed(() -> connectTo(serverUrl), 2500);
+        } catch (UnsatisfiedLinkError error) {
+            showNativeCoreError();
         }
-        serverUrl = serverUrl.replaceAll("/+$", "");
-        prefs().edit().putString(SERVER, serverUrl).apply();
-        connectTo(serverUrl);
+    }
+
+    private void showNativeCoreError() {
+        new AlertDialog.Builder(this)
+            .setTitle("Τοπικός πυρήνας δεν ξεκίνησε")
+            .setMessage("Δεν φορτώθηκε ο ενσωματωμένος Rust πυρήνας. Δεν θα γίνει σύνδεση στο Render ως υποκατάστατο.")
+            .setPositiveButton("OK", null).show();
     }
 
     private SharedPreferences prefs() {
