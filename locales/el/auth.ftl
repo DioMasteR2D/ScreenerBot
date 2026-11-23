@@ -1,0 +1,25 @@
+# Ελληνική σύνδεση και κλείδωμα
+auth-password-label = Κωδικός πρόσβασης
+auth-password-input =
+    .placeholder = Εισαγάγετε κωδικό πρόσβασης
+auth-password-toggle =
+    .aria-label = Εμφάνιση ή απόκρυψη κωδικού
+auth-error-incorrect-password = Λανθασμένος κωδικός
+auth-error-verification-failed = Η επαλήθευση απέτυχε
+auth-error-network = Σφάλμα δικτύου
+auth-error-connection = Σφάλμα σύνδεσης. Δοκιμάστε ξανά.
+auth-login-subtitle = Σύνδεση στον πίνακα ελέγχου
+auth-login-submit = Σύνδεση
+auth-login-signing-in = Γίνεται σύνδεση…
+auth-error-password-required = Εισαγάγετε κωδικό πρόσβασης
+auth-error-login-failed = Η σύνδεση απέτυχε
+auth-totp-title = Έλεγχος ταυτότητας δύο παραγόντων
+auth-totp-hint = Εισαγάγετε τον 6ψήφιο κωδικό από την εφαρμογή ελέγχου ταυτότητας
+auth-totp-verify = Επαλήθευση
+auth-totp-verifying = Γίνεται επαλήθευση…
+auth-error-totp-required = Εισαγάγετε τον 6ψήφιο κωδικό
+auth-error-totp-invalid = Μη έγκυρος κωδικός
+auth-error-session-expired = Η συνεδρία έληξε. Εισαγάγετε ξανά τον κωδικό σας.
+auth-lockscreen-title = Ο πίνακας ελέγχου κλειδώθηκε — εισαγάγετε κωδικό για ξεκλείδωμα
+auth-lockscreen-subtitle = Κλειδωμένος πίνακας ελέγχου
+auth-lockscreen-unlock = Ξεκλείδωμα

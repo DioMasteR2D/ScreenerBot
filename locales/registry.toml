@@ -79,3 +79,8 @@ dir = "rtl"
 code = "fa"
 name = "فارسی"
 dir = "rtl"
+
+[[locale]]
+code = "el"
+name = "Ελληνικά"
+dir = "ltr"
