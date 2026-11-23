@@ -375,10 +375,13 @@ public class MainActivity extends Activity {
                 Uri target = request.getUrl();
                 Uri base = Uri.parse(serverUrl);
                 // Keep dashboard navigation on the configured HTTPS origin only.
-                return !("https".equalsIgnoreCase(target.getScheme())
-                    && base.getHost() != null
+                boolean sameHost = base.getHost() != null
                     && base.getHost().equalsIgnoreCase(target.getHost())
-                    && base.getPort() == target.getPort());
+                    && base.getPort() == target.getPort();
+                boolean secureRemote = "https".equalsIgnoreCase(target.getScheme());
+                boolean localLoopback = "http".equalsIgnoreCase(target.getScheme())
+                    && ("127.0.0.1".equals(target.getHost()) || "localhost".equalsIgnoreCase(target.getHost()));
+                return !(sameHost && (secureRemote || localLoopback));
             }
 
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
