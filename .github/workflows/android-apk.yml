@@ -7,6 +7,14 @@ on:
       - solana-hunter/android-app
     paths:
       - 'android/**'
+      - 'src/**'
+      - 'assets/**'
+      - 'locales/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'build.rs'
+      - 'rust-toolchain.toml'
+      - '.cargo/**'
       - '.github/workflows/android-apk.yml'
 
 permissions:
