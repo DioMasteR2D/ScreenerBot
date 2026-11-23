@@ -5,7 +5,7 @@
 //! shutdown signal, then the bot lifecycle.
 
 use crate::{
-    arguments::{print_banner, print_help, print_version, set_cmd_args},
+    arguments::{print_banner, print_help, print_version},
     config::utils::load_config,
     logger::{self, LogTag},
 };
@@ -16,8 +16,10 @@ use crate::{
 pub async fn boot() {
     crate::net::install_tls_crypto_provider();
 
-    // Store command line arguments
-    set_cmd_args(std::env::args().collect());
+    // Store command line arguments. Android supplies explicit local-server
+    // arguments from the JNI bridge; do not overwrite them with process args.
+    #[cfg(not(target_os = "android"))]
+    crate::arguments::set_cmd_args(std::env::args().collect());
 
     // MCP is a protocol subprocess. It must run before the banner, logger, or
     // config boot so stdout is exclusively JSON-RPC framing.
