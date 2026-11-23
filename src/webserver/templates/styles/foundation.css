@@ -997,3 +997,117 @@ select,
   white-space: nowrap;
   border: 0;
 }
+
+
+/* ==========================================================================
+   SOLANA HUNTER — premium mobile/desktop visual layer
+   Palette-only and surface refinements; all existing controls, IDs, routes,
+   data bindings and strategy behavior remain owned by the original UI.
+   ========================================================================== */
+[data-theme="dark"] {
+  --bg-primary: #080b16;
+  --bg-secondary: #101528;
+  --bg-card: #121a30;
+  --bg-card-hover: #192440;
+  --bg-hover: #192440;
+  --bg-tertiary: #1b2742;
+  --text-primary: #f3f6ff;
+  --text-secondary: #a4b0cc;
+  --text-muted: #7483a6;
+  --border-color: #263454;
+  --header-bg: linear-gradient(115deg, #0b1021 0%, #15132f 52%, #101c36 100%);
+  --header-border: #29375c;
+  --header-text: #f3f6ff;
+  --link-color: #72e4f5;
+  --link-hover: #a6f2ff;
+  --button-primary-bg: #7654ed;
+  --button-primary-hover: #9278ff;
+  --primary-color: #8b6cff;
+  --primary-color-light: rgb(139 108 255 / 14%);
+  --primary-color-dark: #6846d9;
+  --primary-hover: #a48cff;
+  --brand-cyan: #43dff2;
+  --brand-blue: #8b6cff;
+  --shadow-sm: rgb(0 0 0 / 24%);
+  --shadow-md: rgb(0 0 0 / 36%);
+  --shadow-lg: rgb(0 0 0 / 52%);
+  --table-header-bg: #151f38;
+  --table-header-text: #dce6ff;
+  --service-item-bg: #151f38;
+  --active-bg: rgb(139 108 255 / 18%);
+  --hover-bg: #192440;
+  --card-bg: #121a30;
+}
+[data-theme="dark"] body {
+  background:
+    radial-gradient(ellipse at 12% -12%, rgb(105 75 220 / 17%), transparent 38rem),
+    radial-gradient(ellipse at 100% 0%, rgb(34 198 226 / 9%), transparent 34rem),
+    var(--bg-primary);
+}
+[data-theme="dark"] .modern-header {
+  background: linear-gradient(110deg, rgb(11 16 33 / 96%), rgb(19 19 46 / 96%), rgb(12 27 49 / 96%));
+  border-bottom: 1px solid rgb(112 133 190 / 22%);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 20%);
+  backdrop-filter: blur(18px);
+}
+[data-theme="dark"] .portfolio-overview,
+[data-theme="dark"] .portfolio-stat,
+[data-theme="dark"] .page-section,
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .panel,
+[data-theme="dark"] .modal-content {
+  border-color: rgb(112 137 195 / 22%);
+}
+[data-theme="dark"] .portfolio-overview,
+[data-theme="dark"] .portfolio-stat,
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .panel {
+  background: linear-gradient(145deg, rgb(20 29 54 / 96%), rgb(14 21 41 / 96%));
+  box-shadow: 0 12px 32px rgb(0 0 0 / 18%), inset 0 1px 0 rgb(255 255 255 / 3%);
+  border-radius: 16px;
+}
+[data-theme="dark"] button:not(.icon-button):not(.wallet-identity-action),
+[data-theme="dark"] .btn {
+  border-radius: 10px;
+}
+[data-theme="dark"] button.primary,
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] button[type="submit"] {
+  background-image: linear-gradient(115deg, #7654ed, #3c9fda);
+  border-color: transparent;
+  box-shadow: 0 5px 18px rgb(104 70 217 / 24%);
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #0d1428;
+  border-color: #304064;
+  border-radius: 9px;
+  color: var(--text-primary);
+}
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: #8b6cff;
+  box-shadow: 0 0 0 3px rgb(139 108 255 / 16%);
+}
+[data-theme="dark"] ::selection {
+  background: rgb(67 223 242 / 30%);
+}
+@media (max-width: 700px) {
+  [data-theme="dark"] .page-content {
+    padding: 12px;
+  }
+  [data-theme="dark"] .portfolio-overview,
+  [data-theme="dark"] .portfolio-stat,
+  [data-theme="dark"] .card,
+  [data-theme="dark"] .stat-card,
+  [data-theme="dark"] .dashboard-card,
+  [data-theme="dark"] .panel {
+    border-radius: 13px;
+  }
+}
