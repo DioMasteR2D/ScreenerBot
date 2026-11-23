@@ -43,6 +43,7 @@ path = "tests/integration.rs"
 [lib]
 name = "screenerbot"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 doctest = false
 # Note: Default crate-type is "rlib" which is sufficient for desktop builds
 # Android builds will specify crate-type via build script when needed
@@ -59,6 +60,7 @@ path = "src/main.rs"
 # =============================================================================
 
 [dependencies]
+jni = "0.21"
 # Feature sets here are the union of what the library and its tests need. A
 # feature that only a dev-dependency enables is unified into test builds alone,
 # so `cargo build` and `cargo test` would each compile their own copy of the
