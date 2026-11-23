@@ -1,0 +1,17 @@
+assistant-provider-select = Επιλογή παρόχου…
+assistant-decision-allow = Έγκριση
+assistant-decision-pass = Παράλειψη
+assistant-decision-reject = Απόρριψη
+assistant-decision-buy = Αγορά
+assistant-decision-sell = Πώληση
+assistant-decision-hold = Διακράτηση
+assistant-risk-low = Χαμηλός
+assistant-risk-medium = Μεσαίος
+assistant-risk-high = Υψηλός
+assistant-risk-critical = Κρίσιμος
+assistant-overview-description = Ζωντανή κατάσταση AI και ανάλυσης, μετρήσεις απόδοσης και πρόσφατες αξιολογήσεις μοντέλων.
+assistant-features-title = Δυνατότητες μοντέλου
+assistant-metric-total-evaluations = Σύνολο αξιολογήσεων
+assistant-metric-cache-hit-rate = Ποσοστό επιτυχίας cache
+assistant-metric-avg-latency = Μέση καθυστέρηση
+assistant-metric-active-providers = Ενεργοί πάροχοι

@@ -1,0 +1,10 @@
+links-explorer-open = Προβολή στον Explorer
+links-explorer-group-trading = Συναλλαγές
+links-explorer-group-analysis = Ανάλυση
+links-explorer-group-explorers = Explorers
+links-view-solscan = Προβολή στο { -solscan }
+links-view-solana-fm = Προβολή στο { -solanafm }
+links-copy-mint =
+    .title = Αντιγραφή διεύθυνσης mint
+    .aria-label = Αντιγραφή διεύθυνσης mint
+links-mint-address = Διεύθυνση mint

@@ -1,0 +1,9 @@
+format-not-available = Μ/Δ
+format-yes = Ναι
+format-no = Όχι
+format-unknown = Άγνωστο
+format-native-amount = { $amount } { -sol }
+format-usd-amount = USD { $amount }
+format-percent-amount = { $amount }%
+format-approx = ≈ { $value }
+format-just-now = Μόλις τώρα

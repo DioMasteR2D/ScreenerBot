@@ -1,0 +1,13 @@
+hints-category-positions = Θέσεις
+hints-category-filtering = Φιλτράρισμα
+hints-category-trader = Αυτόματος Trader
+hints-category-services = Υπηρεσίες
+hints-category-wallet = Πορτοφόλι
+hints-category-wallets = Πορτοφόλια
+hints-category-config = Ρυθμίσεις
+hints-category-token-details = Λεπτομέρειες token
+hints-category-ui = Περιβάλλον
+hints-positions-overview-title = Επισκόπηση θέσεων
+hints-positions-overview-content = Οι τρέχουσες κατοχές token και οι θέσεις συναλλαγών σας.
+hints-positions-dca-title = DCA (Μέσος όρος κόστους)
+hints-positions-partial-exit-title = Μερική έξοδος

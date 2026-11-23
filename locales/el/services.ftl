@@ -1,0 +1,11 @@
+services-health-component-unavailable = Το στοιχείο { $component } δεν είναι διαθέσιμο
+services-health-unavailable = Η κατάσταση υγείας δεν είναι διαθέσιμη
+services-health-pools-not-running = Η υπηρεσία pools δεν εκτελείται
+services-health-events-db-uninitialized = Η βάση συμβάντων δεν έχει αρχικοποιηθεί
+services-health-sol-price-not-running = Η υπηρεσία τιμής SOL δεν εκτελείται
+services-health-sol-price-stale = Τα δεδομένα τιμής SOL είναι παλιά ({ $seconds } δευτ.)
+services-health-sol-price-no-data = Δεν υπάρχουν ακόμη δεδομένα τιμής SOL
+services-health-telegram-discovery = Λειτουργία ανακάλυψης
+services-health-telegram-disconnected = Αποσυνδεδεμένο
+services-health-assistant-tasks-disabled = Απενεργοποιημένο στις ρυθμίσεις
+services-health-filtering-snapshot-stale = Τα δεδομένα φιλτραρίσματος είναι παλιά ({ $seconds } δευτ.)

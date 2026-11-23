@@ -1,0 +1,13 @@
+updates-defer-automatic-install-disabled = Η αυτόματη εγκατάσταση είναι απενεργοποιημένη. Η ενημέρωση θα εφαρμοστεί όταν το επιλέξετε.
+updates-defer-trading-active = Υπάρχει ενεργή θέση, συναλλαγή ή εργασία. Η επανεκκίνηση αναβάλλεται μέχρι να ολοκληρωθεί.
+updates-defer-needs-installer = Αυτή η έκδοση ενημερώνει και το περιβάλλον εφαρμογής· απαιτείται μία εκτέλεση του εγκαταστάτη.
+updates-check-failed = { $cause }
+updates-download-error-unreachable = Δεν ήταν δυνατή η σύνδεση με τους διακομιστές ενημέρωσης. Η επόμενη προσπάθεια θα συνεχίσει τη λήψη.
+updates-download-error-unverified = Η ληφθείσα ενημέρωση δεν πέρασε την επαλήθευση και αφαιρέθηκε.
+updates-download-error-interrupted = Η λήψη διακόπηκε επειδή έγινε επανεκκίνηση του { -brand }.
+updates-download-error-missing = Το αρχείο ενημέρωσης δεν είναι πλέον διαθέσιμο.
+updates-download-started = Λήψη ενημέρωσης v{ $version }…
+updates-apply-started = Εγκατάσταση ενημέρωσης. Το { -brand } θα επανεκκινηθεί και θα συνδεθεί αυτόματα.
+updates-install-opened = Άνοιξε ο επαληθευμένος εγκαταστάτης. Ολοκληρώστε την εγκατάσταση του λειτουργικού συστήματος.
+updates-installer-toast-title = Άνοιξε ο εγκαταστάτης
+updates-installer-toast-message = Το { -brand } θα τερματιστεί ομαλά.
