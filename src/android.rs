@@ -36,7 +36,7 @@ pub extern "system" fn Java_com_diomaster_solanahunter_NativeCore_start(
         .spawn(move || {
             // Android's private app directory is not shared with other apps.
             std::env::set_var("SCREENERBOT_DATA_DIR", directory);
-            screenerbot::arguments::set_cmd_args(vec![
+            crate::arguments::set_cmd_args(vec![
                 "screenerbot".to_owned(),
                 "--host".to_owned(),
                 "127.0.0.1".to_owned(),
@@ -48,7 +48,7 @@ pub extern "system" fn Java_com_diomaster_solanahunter_NativeCore_start(
                 .enable_all()
                 .build()
             {
-                Ok(runtime) => runtime.block_on(screenerbot::run::boot()),
+                Ok(runtime) => runtime.block_on(crate::run::boot()),
                 Err(error) => {
                     eprintln!("ScreenerBot Android runtime failed: {error}");
                     RUNTIME_STARTED.store(false, Ordering::Release);
