@@ -55,15 +55,30 @@ pub async fn boot() {
         "Logger initialized, attempting to load config...",
     );
 
-    // Load configuration. A file that cannot be read or parsed is a failed boot: the
-    // structured error reaches the terminal, the log file and the GUI shell, and the
-    // non-zero exit tells the shell the core did not start.
-    if let Err(e) = load_config() {
-        crate::errors::StartupError::from(super::Error::config_load(e)).emit();
-        logger::flush();
-        std::process::exit(1);
+    // Android's first launch has no config.toml yet. In that state the app
+    // must enter the normal first-run initialization flow in run_bot(), where
+    // the local dashboard lets the user choose Explore Mode or complete setup.
+    // Calling load_config() unconditionally here used to treat a missing file
+    // as fatal and process::exit(1) terminated the entire Android application.
+    // Existing configs are still loaded and validated before service startup.
+    #[cfg(target_os = "android")]
+    let should_load_config = crate::paths::get_config_path().exists();
+    #[cfg(not(target_os = "android"))]
+    let should_load_config = true;
+
+    if should_load_config {
+        if let Err(e) = load_config() {
+            crate::errors::StartupError::from(super::Error::config_load(e)).emit();
+            logger::flush();
+            std::process::exit(1);
+        }
+        logger::info(LogTag::System, "Configuration loaded successfully");
+    } else {
+        logger::info(
+            LogTag::System,
+            "No Android config.toml found - continuing to first-run initialization",
+        );
     }
-    logger::info(LogTag::System, "Configuration loaded successfully");
 
     // Detect and log the system/network proxy once (used by HTTP, RPC and WS).
     // Must run AFTER config load so `[network] proxy` is available.
