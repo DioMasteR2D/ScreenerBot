@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           test -n "$ANDROID_HOME"
-          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager | head -n 1)"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
           test -x "$SDKMANAGER"
           set +o pipefail
           yes | "$SDKMANAGER" --licenses >/dev/null
@@ -93,7 +93,9 @@ jobs:
         run: |
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt" dump badging "$APK" | head -n 5
+          AAPT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt"
+          "$AAPT" dump badging "$APK" > /tmp/screenerbot-apk-badging.txt
+          head -n 5 /tmp/screenerbot-apk-badging.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
