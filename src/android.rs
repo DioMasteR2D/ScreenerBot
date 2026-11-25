@@ -22,6 +22,7 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     mut env: JNIEnv,
     _class: JClass,
     data_directory: JString,
+    machine_identifier: JString,
 ) -> jboolean {
     let directory: String = match env.get_string(&data_directory) {
         Ok(value) => value.into(),
@@ -39,7 +40,20 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     // Keep every database, config file, and wallet store inside this app's
     // private sandbox. Android's Keystore integration is a separate follow-up;
     // the existing encrypted-wallet mechanism is retained unchanged.
+    let identifier: String = match env.get_string(&machine_identifier) {
+        Ok(value) => value.into(),
+        Err(error) => {
+            eprintln!("ScreenerBot Android: invalid Keystore identity: {error}");
+            return jni::sys::JNI_FALSE;
+        }
+    };
+    if identifier.trim().is_empty() {
+        eprintln!("ScreenerBot Android: Keystore identity is empty");
+        return jni::sys::JNI_FALSE;
+    }
+
     std::env::set_var("SCREENERBOT_DATA_DIR", directory);
+    std::env::set_var("SCREENERBOT_ANDROID_MACHINE_ID", identifier);
 
     if STARTED.swap(true, Ordering::SeqCst) {
         return jni::sys::JNI_TRUE;
