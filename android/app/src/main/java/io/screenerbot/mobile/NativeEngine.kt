@@ -5,6 +5,6 @@ internal object NativeEngine {
         System.loadLibrary("screenerbot")
     }
 
-    external fun start(dataDirectory: String): Boolean
+    external fun start(dataDirectory: String, machineIdentifier: String): Boolean
     external fun dashboardConnection(): String?
 }
