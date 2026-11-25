@@ -33,8 +33,8 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     }
 
     // Keep every database, config file, and wallet store inside this app's
-    // private sandbox. Android's Keystore integration is a separate follow-up;
-    // the existing encrypted-wallet mechanism is retained unchanged.
+    // private sandbox. The stable machine identity is unwrapped by the Kotlin
+    // shell from Android Keystore and passed only into this process environment.
     let identifier: String = match env.get_string(&machine_identifier) {
         Ok(value) => value.into(),
         Err(error) => {
