@@ -36,12 +36,12 @@ class EngineService : Service() {
         try {
             val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
             if (!NativeEngine.start(filesDir.resolve("screenerbot").absolutePath, machineIdentifier)) {
-                updateNotification("Engine failed to initialize. Check app logs.")
+                updateNotification("Αποτυχία αρχικοποίησης της μηχανής. Έλεγξε τα αρχεία καταγραφής.")
             }
         } catch (error: UnsatisfiedLinkError) {
-            updateNotification("Native engine library is missing. Rebuild the Android package.")
+            updateNotification("Λείπει η βιβλιοθήκη της μηχανής. Χρειάζεται νέα έκδοση της εφαρμογής.")
         } catch (error: Exception) {
-            updateNotification("Engine startup error: ${error.message ?: "unknown"}")
+            updateNotification("Σφάλμα εκκίνησης μηχανής: ${error.message ?: "άγνωστο"}")
         }
         return START_STICKY
     }
@@ -52,14 +52,14 @@ class EngineService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "ScreenerBot engine",
+                "Μηχανή ScreenerBot",
                 NotificationManager.IMPORTANCE_LOW
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
     }
 
-    private fun buildNotification(text: String = "Local engine is starting"): Notification {
+    private fun buildNotification(text: String = "Η τοπική μηχανή ξεκινά"): Notification {
         val openApp = PendingIntent.getActivity(
             this,
             0,
