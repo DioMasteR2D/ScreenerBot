@@ -44,6 +44,7 @@ trader-notice-loss-limit = Επιτεύχθηκε το όριο ζημίας
 trader-notice-loss-limit-message = Οι νέες πραγματικές είσοδοι έχουν παγώσει μέχρι την επαναφορά της περιόδου. Οι έξοδοι συνεχίζονται.
 trader-notice-stats-failed = Δεν ήταν δυνατή η φόρτωση των στατιστικών
 trader-controls-group =
+    .aria-label = Στοιχεία ελέγχου συναλλαγών
 trader-monitor-dormant = Εκκινείται μαζί με τον Αυτόματο Trader
 trader-controls-note = Η διακοπή του Αυτόματου Trader απενεργοποιεί όλο τον Trader. Οι διακόπτες παγώνουν μόνο τις εισόδους ή τις εξόδους. Η αναγκαστική διακοπή σταματά και το Copy Trading.
 trader-force-stop-confirm = Αναγκαστική διακοπή συναλλαγών
