@@ -16,8 +16,12 @@ use crate::{
 pub async fn boot() {
     crate::net::install_tls_crypto_provider();
 
-    // Store command line arguments
-    set_cmd_args(std::env::args().collect());
+    // Store command line arguments. Android uses the same secured GUI-mode
+    // listener as the desktop shell: dynamic loopback port plus session token.
+    let mut command_args: Vec<String> = std::env::args().collect();
+    #[cfg(target_os = "android")]
+    command_args.push("--gui".to_owned());
+    set_cmd_args(command_args);
 
     // MCP is a protocol subprocess. It must run before the banner, logger, or
     // config boot so stdout is exclusively JSON-RPC framing.
