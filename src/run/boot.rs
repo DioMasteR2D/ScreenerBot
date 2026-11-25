@@ -68,8 +68,15 @@ pub async fn boot() {
 
     if should_load_config {
         if let Err(e) = load_config() {
+            let detail = e.to_string();
             crate::errors::StartupError::from(super::Error::config_load(e)).emit();
             logger::flush();
+            #[cfg(target_os = "android")]
+            {
+                crate::android::record_startup_error(detail);
+                return;
+            }
+            #[cfg(not(target_os = "android"))]
             std::process::exit(1);
         }
         logger::info(LogTag::System, "Configuration loaded successfully");
@@ -97,8 +104,15 @@ pub async fn boot() {
     // with a non-zero code so callers (Electron, systemd) can tell a failed
     // boot apart from a clean shutdown.
     if let Err(e) = super::run_bot().await {
+        let detail = e.to_string();
         crate::errors::StartupError::from(e).emit();
         logger::flush();
+        #[cfg(target_os = "android")]
+        {
+            crate::android::record_startup_error(detail);
+            return;
+        }
+        #[cfg(not(target_os = "android"))]
         std::process::exit(1);
     }
 
