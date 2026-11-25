@@ -126,19 +126,25 @@ fn open_installer(path: &Path) -> Result<()> {
         }
         std::process::Command::new("xdg-open")
     };
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    {
+        command.arg(path);
+        #[cfg(target_os = "windows")]
+        command.args(["/passive", "/norestart"]);
+
+        command
+            .spawn()
+            .map_err(|error| Error::Io(crate::errors::IoError::from(error)))?;
+        Ok(())
+    }
+
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    return Err(Error::UnsupportedInstall {
-        detail: "this operating system has no update installer adapter".to_owned(),
-    });
-
-    command.arg(path);
-    #[cfg(target_os = "windows")]
-    command.args(["/passive", "/norestart"]);
-
-    command
-        .spawn()
-        .map_err(|error| Error::Io(crate::errors::IoError::from(error)))?;
-    Ok(())
+    {
+        let _ = path;
+        Err(Error::UnsupportedInstall {
+            detail: "this operating system has no update installer adapter".to_owned(),
+        })
+    }
 }
 
 #[cfg(test)]
