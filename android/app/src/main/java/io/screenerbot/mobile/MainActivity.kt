@@ -51,14 +51,14 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
         }
         status = TextView(this).apply {
-            text = "Starting the local trading engine…"
+            text = "Εκκίνηση της μηχανής ScreenerBot…"
             textSize = 15f
             setTextColor(0xFFB8C1D1.toInt())
             gravity = Gravity.CENTER
             setPadding(0, 24, 0, 24)
         }
         val retry = Button(this).apply {
-            text = "Retry connection"
+            text = "Επανάληψη σύνδεσης"
             setOnClickListener { attempts = 0; waitForDashboard() }
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
@@ -75,7 +75,7 @@ class MainActivity : Activity() {
 
     private fun waitForDashboard() {
         attempts++
-        status.text = "Starting ScreenerBot engine… ($attempts)"
+        status.text = "Εκκίνηση της μηχανής ScreenerBot… ($attempts)"
         executor.execute {
             val connection = try {
                 NativeEngine.dashboardConnection()
@@ -103,7 +103,7 @@ class MainActivity : Activity() {
             runOnUiThread {
                 if (ready && port != null && token != null) openDashboard(port, token)
                 else if (attempts < 120) handler.postDelayed({ waitForDashboard() }, 1000)
-                else status.text = "Engine is not responding. Check its notification and retry."
+                else status.text = "Η μηχανή δεν ανταποκρίνεται. Έλεγξε την ειδοποίηση και δοκίμασε ξανά."
             }
         }
     }
@@ -135,7 +135,7 @@ class MainActivity : Activity() {
                       ? init.headers
                       : (input instanceof Request ? input.headers : undefined);
                     const headers = new Headers(sourceHeaders);
-                    headers.set('X-ScreenerBot-Token', token);
+                    headers.set('X-ScreenerBot-Token', token);\n                    headers.set('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
                     return originalFetch(input, { ...(init || {}), headers });
                   };
                   const originalOpen = XMLHttpRequest.prototype.open;
@@ -146,7 +146,7 @@ class MainActivity : Activity() {
                   };
                   XMLHttpRequest.prototype.send = function(body) {
                     if (this.__screenerBotLocal) {
-                      this.setRequestHeader('X-ScreenerBot-Token', token);
+                      this.setRequestHeader('X-ScreenerBot-Token', token);\n                      this.setRequestHeader('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
                     }
                     return originalSend.call(this, body);
                   };
@@ -155,7 +155,7 @@ class MainActivity : Activity() {
             if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
                 WebViewCompat.addDocumentStartJavaScript(this, script, setOf(origin))
             }
-            loadUrl("$origin/", mapOf("X-ScreenerBot-Token" to token))
+            loadUrl("$origin/", mapOf("X-ScreenerBot-Token" to token, "Accept-Language" to "el-GR,el;q=0.9,en;q=0.8"))
         }
         setContentView(webView, ViewGroup.LayoutParams(-1, -1))
     }
