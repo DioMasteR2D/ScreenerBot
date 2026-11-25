@@ -43,6 +43,7 @@ path = "tests/integration.rs"
 [lib]
 name = "screenerbot"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 doctest = false
 # Note: Default crate-type is "rlib" which is sufficient for desktop builds
 # Android builds will specify crate-type via build script when needed
@@ -246,6 +247,7 @@ openssl = { version = "0.10", features = ["vendored"] }
 # Android target-specific dependencies - vendored OpenSSL for cross-compilation
 [target.'cfg(target_os = "android")'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
+jni = "0.21"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = { version = "0.7", optional = true }
