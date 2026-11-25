@@ -75,7 +75,7 @@ class MainActivity : Activity() {
         }
         val retry = Button(this).apply {
             text = "Επανάληψη σύνδεσης"
-            setOnClickListener { attempts = 0; waitForDashboard() }
+            setOnClickListener { attempts = 0; startEngineService(); waitForDashboard() }
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
@@ -118,10 +118,20 @@ class MainActivity : Activity() {
                 }
             } else false
 
+            val startupError = if (!ready) {
+                try { NativeEngine.startupError() } catch (_: Throwable) { null }
+            } else null
+
             runOnUiThread {
-                if (ready && port != null && token != null) openDashboard(port, token)
-                else if (attempts < 120) handler.postDelayed({ waitForDashboard() }, 1000)
-                else status.text = "Η μηχανή δεν ανταποκρίνεται. Έλεγξε την ειδοποίηση και δοκίμασε ξανά."
+                if (ready && port != null && token != null) {
+                    openDashboard(port, token)
+                } else if (!startupError.isNullOrBlank()) {
+                    status.text = "Σφάλμα εκκίνησης: $startupError"
+                } else if (attempts < 120) {
+                    handler.postDelayed({ waitForDashboard() }, 1000)
+                } else {
+                    status.text = "Η μηχανή δεν ανταποκρίνεται. Πάτησε επανάληψη για νέα προσπάθεια."
+                }
             }
         }
     }
