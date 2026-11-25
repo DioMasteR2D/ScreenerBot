@@ -87,7 +87,7 @@ config_struct! {
         theme: String = "dark".to_owned(),
 
         /// Display language: "system" or a registered locale code (see locales/registry.toml)
-        language: String = "system".to_owned(),
+        language: String = if cfg!(target_os = "android") { "el".to_owned() } else { "system".to_owned() },
 
         /// Token logo shape ("circle" or "rounded-square")
         token_logo_shape: String = "circle".to_owned(),
