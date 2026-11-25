@@ -9,8 +9,17 @@ use jni::{
     JNIEnv,
 };
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 static STARTED: AtomicBool = AtomicBool::new(false);
+static STARTUP_ERROR: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+
+pub(crate) fn record_startup_error(message: impl Into<String>) {
+    if let Ok(mut error) = STARTUP_ERROR.get_or_init(|| Mutex::new(None)).lock() {
+        *error = Some(message.into());
+    }
+}
+
 
 #[no_mangle]
 pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
@@ -45,6 +54,10 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     if identifier.trim().is_empty() {
         eprintln!("ScreenerBot Android: Keystore identity is empty");
         return jni::sys::JNI_FALSE;
+    }
+
+    if let Ok(mut error) = STARTUP_ERROR.get_or_init(|| Mutex::new(None)).lock() {
+        *error = None;
     }
 
     std::env::set_var("SCREENERBOT_DATA_DIR", directory);
@@ -91,5 +104,21 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_dashboardConnecti
             eprintln!("ScreenerBot Android: could not return dashboard session: {error}");
             std::ptr::null_mut()
         }
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_startupError(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let message = STARTUP_ERROR
+        .get_or_init(|| Mutex::new(None))
+        .lock()
+        .ok()
+        .and_then(|error| error.clone());
+    match message.and_then(|value| env.new_string(value).ok()) {
+        Some(value) => value.into_raw(),
+        None => std::ptr::null_mut(),
     }
 }
