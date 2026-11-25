@@ -15,6 +15,9 @@
 
 pub mod account;
 pub mod actions;
+
+#[cfg(target_os = "android")]
+mod android;
 pub mod agent_control;
 pub mod apis;
 pub mod arguments;
