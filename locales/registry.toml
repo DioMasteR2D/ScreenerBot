@@ -6,6 +6,11 @@ name = "English"
 dir = "ltr"
 
 [[locale]]
+code = "el"
+name = "Ελληνικά"
+dir = "ltr"
+
+[[locale]]
 code = "de"
 name = "Deutsch"
 dir = "ltr"
