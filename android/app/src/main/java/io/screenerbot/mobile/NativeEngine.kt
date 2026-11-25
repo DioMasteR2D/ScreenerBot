@@ -7,4 +7,5 @@ internal object NativeEngine {
 
     external fun start(dataDirectory: String, machineIdentifier: String): Boolean
     external fun dashboardConnection(): String?
+    external fun startupError(): String?
 }
