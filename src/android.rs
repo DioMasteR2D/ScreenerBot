@@ -8,13 +8,8 @@ use jni::{
     sys::{jboolean, jstring},
     JNIEnv,
 };
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    OnceLock,
-};
-use tokio::runtime::Runtime;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-static RUNTIME: OnceLock<Runtime> = OnceLock::new();
 static STARTED: AtomicBool = AtomicBool::new(false);
 
 #[no_mangle]
@@ -59,17 +54,24 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
         return jni::sys::JNI_TRUE;
     }
 
-    let runtime = RUNTIME.get_or_init(|| {
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .thread_name("screenerbot-engine")
-            .build()
-            .expect("could not create ScreenerBot Tokio runtime")
-    });
+    let worker = std::thread::Builder::new()
+        .name("screenerbot-engine".to_owned())
+        .spawn(|| {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .thread_name("screenerbot-runtime")
+                .build()
+                .expect("could not create ScreenerBot Tokio runtime");
+            // Run on a dedicated native thread so the engine boot future does
+            // not need to satisfy Tokio's Send bound for Runtime::spawn.
+            runtime.block_on(crate::run::boot());
+        });
 
-    runtime.spawn(async {
-        crate::run::boot().await;
-    });
+    if let Err(error) = worker {
+        STARTED.store(false, Ordering::SeqCst);
+        eprintln!("ScreenerBot Android: could not start engine thread: {error}");
+        return jni::sys::JNI_FALSE;
+    }
 
     jni::sys::JNI_TRUE
 }
