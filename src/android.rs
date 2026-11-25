@@ -5,7 +5,7 @@
 //! manager remain the single source of truth for engine startup.
 use jni::{
     objects::{JClass, JString},
-    sys::jboolean,
+    sys::{jboolean, jstring},
     JNIEnv,
 };
 use std::sync::{
@@ -58,4 +58,22 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     });
 
     jni::sys::JNI_TRUE
+}
+
+#[no_mangle]
+pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_dashboardConnection(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let port = crate::global::get_webserver_port();
+    let Some(token) = crate::global::get_security_token() else {
+        return std::ptr::null_mut();
+    };
+    match env.new_string(format!("{port}:{token}")) {
+        Ok(value) => value.into_raw(),
+        Err(error) => {
+            eprintln!("ScreenerBot Android: could not return dashboard session: {error}");
+            std::ptr::null_mut()
+        }
+    }
 }
