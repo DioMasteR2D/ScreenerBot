@@ -135,7 +135,8 @@ class MainActivity : Activity() {
                       ? init.headers
                       : (input instanceof Request ? input.headers : undefined);
                     const headers = new Headers(sourceHeaders);
-                    headers.set('X-ScreenerBot-Token', token);\n                    headers.set('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
+                    headers.set('X-ScreenerBot-Token', token);
+                    headers.set('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
                     return originalFetch(input, { ...(init || {}), headers });
                   };
                   const originalOpen = XMLHttpRequest.prototype.open;
@@ -146,7 +147,8 @@ class MainActivity : Activity() {
                   };
                   XMLHttpRequest.prototype.send = function(body) {
                     if (this.__screenerBotLocal) {
-                      this.setRequestHeader('X-ScreenerBot-Token', token);\n                      this.setRequestHeader('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
+                      this.setRequestHeader('X-ScreenerBot-Token', token);
+                      this.setRequestHeader('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
                     }
                     return originalSend.call(this, body);
                   };
