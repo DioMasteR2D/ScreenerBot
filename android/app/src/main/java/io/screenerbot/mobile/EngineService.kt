@@ -34,7 +34,8 @@ class EngineService : Service() {
         }
 
         try {
-            if (!NativeEngine.start(filesDir.resolve("screenerbot").absolutePath)) {
+            val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
+            if (!NativeEngine.start(filesDir.resolve("screenerbot").absolutePath, machineIdentifier)) {
                 updateNotification("Engine failed to initialize. Check app logs.")
             }
         } catch (error: UnsatisfiedLinkError) {
