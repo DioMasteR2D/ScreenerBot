@@ -46,7 +46,7 @@ fn get_machine_id() -> Result<String> {
         let id_file = crate::paths::get_device_id_path();
 
         if id_file.exists() {
-            std::fs::read_to_string(&id_file).map_err(crate::errors::IoError::from)
+            Ok(std::fs::read_to_string(&id_file).map_err(crate::errors::IoError::from)?)
         } else {
             let new_id = uuid::Uuid::new_v4().to_string();
             if let Some(parent) = id_file.parent() {
