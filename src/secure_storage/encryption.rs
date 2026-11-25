@@ -35,6 +35,14 @@ fn get_machine_id() -> Result<String> {
 
     #[cfg(target_os = "android")]
     {
+        // The Android shell unwraps this identifier with a non-exportable
+        // Android Keystore key before starting the Rust runtime.
+        if let Ok(identifier) = std::env::var("SCREENERBOT_ANDROID_MACHINE_ID") {
+            if !identifier.trim().is_empty() {
+                return Ok(identifier);
+            }
+        }
+
         let id_file = crate::paths::get_device_id_path();
 
         if id_file.exists() {
