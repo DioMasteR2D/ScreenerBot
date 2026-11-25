@@ -14,6 +14,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.webkit.WebViewCompat
@@ -41,27 +42,44 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(36, 36, 36, 36)
-            setBackgroundColor(0xFF10131B.toInt())
+            setPadding(24, 28, 24, 28)
+            setBackgroundColor(0xFF07111D.toInt())
         }
         val title = TextView(this).apply {
             text = "SCREENERBOT"
-            textSize = 26f
-            setTextColor(0xFFFFFFFF.toInt())
+            textSize = 27f
+            letterSpacing = 0.16f
+            setTextColor(0xFFF4FBFF.toInt())
             gravity = Gravity.CENTER
+        }
+        val subtitle = TextView(this).apply {
+            text = "AI  •  SOLANA  •  MARKET INTELLIGENCE"
+            textSize = 10f
+            letterSpacing = 0.12f
+            setTextColor(0xFF36E8B5.toInt())
+            gravity = Gravity.CENTER
+            setPadding(0, 6, 0, 14)
+        }
+        val artwork = ImageView(this).apply {
+            setImageResource(R.drawable.screenerbot_splash)
+            contentDescription = "ScreenerBot — ρομπότ τεχνητής νοημοσύνης και γραφήματα αγοράς"
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
         }
         status = TextView(this).apply {
             text = "Εκκίνηση της μηχανής ScreenerBot…"
-            textSize = 15f
-            setTextColor(0xFFB8C1D1.toInt())
+            textSize = 14f
+            setTextColor(0xFFB8C8D8.toInt())
             gravity = Gravity.CENTER
-            setPadding(0, 24, 0, 24)
+            setPadding(0, 18, 0, 18)
         }
         val retry = Button(this).apply {
             text = "Επανάληψη σύνδεσης"
             setOnClickListener { attempts = 0; waitForDashboard() }
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
+        root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
+        root.addView(artwork, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(status, LinearLayout.LayoutParams(-1, -2))
         root.addView(retry, LinearLayout.LayoutParams(-1, -2))
         setContentView(root)
