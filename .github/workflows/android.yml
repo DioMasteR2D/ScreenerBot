@@ -11,6 +11,7 @@ on:
       - "build.rs"
       - "src/**"
       - "android/**"
+      - "locales/**"
       - ".github/workflows/android.yml"
   workflow_dispatch:
 
