@@ -78,6 +78,7 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
             // Run on a dedicated native thread so the engine boot future does
             // not need to satisfy Tokio's Send bound for Runtime::spawn.
             runtime.block_on(crate::run::boot());
+            STARTED.store(false, Ordering::SeqCst);
         });
 
     if let Err(error) = worker {
