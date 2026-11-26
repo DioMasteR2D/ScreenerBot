@@ -103,21 +103,53 @@ jobs:
         run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
 
       - name: Run native engine smoke test on Android emulator
-        uses: reactivecircus/android-emulator-runner@ab495a9b42f2af30f5222bd978136f9b0a85b68a
         env:
-          # GitHub-hosted Linux runners may not expose KVM. Explicitly permit
-          # QEMU's TCG software CPU emulation instead of letting the emulator
-          # exit immediately with "Software CPU emulation (-accel off) is not supported".
           ANDROID_I_WANT_MY_TCG: "yes"
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_2
-          disable-animations: true
-          # TCG boot on GitHub-hosted runners can take just over 10 minutes.
-          emulator-boot-timeout: 1200
-          script: cd android && gradle --no-daemon connectedDebugAndroidTest
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
+          yes | "$SDKMANAGER" "$SYSTEM_IMAGE"
+          echo no | "$ANDROID_HOME/cmdline-tools/$(ls "$ANDROID_HOME/cmdline-tools" | sort -V | tail -1)/bin/avdmanager" create avd --force -n screenerbot-ci --package "$SYSTEM_IMAGE" --device pixel_2
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          "$ANDROID_HOME/emulator/emulator" -port 5554 -avd screenerbot-ci -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel off > /tmp/screenerbot-emulator.log 2>&1 &
+          EMULATOR_PID=$!
+          cleanup() {
+            adb -s emulator-5554 emu kill >/dev/null 2>&1 || true
+            kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          adb start-server
+          adb -s emulator-5554 wait-for-device
+          echo "Waiting for Android boot..."
+          for i in $(seq 1 600); do
+            BOOT="$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            if [ "$BOOT" = "1" ]; then break; fi
+            if [ "$i" -eq 600 ]; then
+              cat /tmp/screenerbot-emulator.log
+              echo "Emulator boot timed out" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Waiting for Android input service..."
+          for i in $(seq 1 120); do
+            if adb -s emulator-5554 shell service check input 2>&1 | grep -q "found"; then break; fi
+            if [ "$i" -eq 120 ]; then
+              cat /tmp/screenerbot-emulator.log
+              echo "Android input service did not become available" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+          adb -s emulator-5554 shell input keyevent 82
+          adb -s emulator-5554 shell settings put global window_animation_scale 0.0
+          adb -s emulator-5554 shell settings put global transition_animation_scale 0.0
+          adb -s emulator-5554 shell settings put global animator_duration_scale 0.0
+          cd android
+          gradle --no-daemon connectedDebugAndroidTest
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
