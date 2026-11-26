@@ -176,6 +176,9 @@ impl Service for WebserverService {
             })
         })?;
 
+        #[cfg(target_os = "android")]
+        crate::android::record_startup_stage("Local HTTP listener bound");
+
         // Get actual configured host and port (not the defaults)
         let host = crate::global::get_webserver_host();
         let port = crate::global::get_webserver_port();
