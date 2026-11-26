@@ -36,6 +36,10 @@ class MainActivity : Activity() {
         requestNotificationPermission()
         showStartupScreen()
         startEngineService()
+        // Start JNI from the Activity's Android process before any background
+        // executor work. The native entry point immediately creates its own
+        // engine thread; the Activity then polls the real local listener.
+        startLocalEngine()
         waitForDashboard()
     }
 
@@ -92,29 +96,33 @@ class MainActivity : Activity() {
         else startService(intent)
     }
 
+    private fun startLocalEngine() {
+        if (engineStartAttempted) return
+        try {
+            val dataDirectory = filesDir.resolve("screenerbot")
+            if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
+                throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων")
+            }
+            val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
+            if (machineIdentifier.isBlank()) {
+                throw IllegalStateException("Το Android Keystore επέστρεψε κενό αναγνωριστικό")
+            }
+            engineStartAttempted = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
+            if (!engineStartAttempted) {
+                status.text = "Η JNI δεν ξεκίνησε τη μηχανή. ${NativeEngine.startupDiagnostics() ?: ""}"
+            } else {
+                status.text = "Η τοπική μηχανή ξεκινά στο Android…"
+            }
+        } catch (error: Throwable) {
+            status.text = "Αποτυχία εκκίνησης JNI: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
+        }
+    }
+
     private fun waitForDashboard() {
         attempts++
         status.text = "Εκκίνηση της μηχανής ScreenerBot… ($attempts)"
         executor.execute {
             var probeDetail = "Δεν έχει ληφθεί ακόμη σύνδεση από τη μηχανή"
-            if (!engineStartAttempted) {
-                try {
-                    val dataDirectory = filesDir.resolve("screenerbot")
-                    if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
-                        throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων")
-                    }
-                    val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
-                    if (machineIdentifier.isBlank()) {
-                        throw IllegalStateException("Το Android Keystore επέστρεψε κενό αναγνωριστικό")
-                    }
-                    val started = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
-                    if (!started) throw IllegalStateException("NativeEngine.start() επέστρεψε false")
-                    engineStartAttempted = true
-                    probeDetail = "Η τοπική μηχανή ξεκίνησε από το MainActivity"
-                } catch (error: Throwable) {
-                    probeDetail = "Αποτυχία εκκίνησης JNI: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
-                }
-            }
             val connection = try {
                 NativeEngine.dashboardConnection()
             } catch (error: Throwable) {
