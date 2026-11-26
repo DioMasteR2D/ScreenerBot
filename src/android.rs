@@ -95,9 +95,22 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
             };
             // Run on a dedicated native thread so the engine boot future does
             // not need to satisfy Tokio's Send bound for Runtime::spawn.
+            // Catch panics at the JNI boundary instead of leaving a stale startup state.
             record_startup_stage("Starting ScreenerBot core");
-            runtime.block_on(crate::run::boot());
-            record_startup_stage("Engine stopped");
+            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                runtime.block_on(crate::run::boot());
+            }));
+            match outcome {
+                Ok(()) => record_startup_stage("Engine stopped"),
+                Err(payload) => {
+                    let detail = payload.downcast_ref::<String>()
+                        .cloned()
+                        .or_else(|| payload.downcast_ref::<&str>().map(|value| (*value).to_owned()))
+                        .unwrap_or_else(|| "non-string Rust panic".to_owned());
+                    record_startup_error(format!("Native engine panicked: {detail}"));
+                    record_startup_stage("Native engine panicked");
+                }
+            }
             STARTED.store(false, Ordering::SeqCst);
         });
 
