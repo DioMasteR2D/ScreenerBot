@@ -16,6 +16,8 @@ use crate::{
 pub async fn boot() {
     #[cfg(target_os = "android")]
     crate::android::record_startup_stage("Boot sequence started");
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Installing TLS crypto provider");
     crate::net::install_tls_crypto_provider();
     #[cfg(target_os = "android")]
     crate::android::record_startup_stage("TLS provider installed");
