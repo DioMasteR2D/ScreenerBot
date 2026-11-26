@@ -80,7 +80,12 @@ class MainActivity : Activity() {
         }
         val retry = Button(this).apply {
             text = "Επανάληψη σύνδεσης"
-            setOnClickListener { attempts = 0; startEngineService(); waitForDashboard() }
+            setOnClickListener {
+            attempts = 0
+            startEngineService()
+            startLocalEngine()
+            waitForDashboard()
+        }
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
@@ -97,7 +102,6 @@ class MainActivity : Activity() {
     }
 
     private fun startLocalEngine() {
-        if (engineStartAttempted) return
         try {
             val dataDirectory = filesDir.resolve("screenerbot")
             if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
