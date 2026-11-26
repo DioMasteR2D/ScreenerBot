@@ -14,6 +14,8 @@ use crate::{
 /// hook, ctrl-c shutdown signal, one-shot wallet reset, run the bot, and
 /// restart-after-graceful-shutdown handling. Called once from `main()`.
 pub async fn boot() {
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Boot sequence started");
     crate::net::install_tls_crypto_provider();
 
     // Store command line arguments. Android uses the same secured GUI-mode
@@ -95,6 +97,8 @@ pub async fn boot() {
     crate::process::panic_hook::install();
 
     logger::info(LogTag::System, "ScreenerBot starting...");
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Entering bot startup");
 
     // Set up shutdown signal handler
     super::shutdown::spawn_initial_ctrl_c_listener();
