@@ -111,7 +111,11 @@ jobs:
           set -euo pipefail
           SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
+          # sdkmanager exits successfully after accepting the prompt; `yes` then gets SIGPIPE.
+          # Disable pipefail for this pipeline so that expected SIGPIPE is not treated as a CI failure.
+          set +o pipefail
           yes | "$SDKMANAGER" "$SYSTEM_IMAGE"
+          set -o pipefail
           echo no | "$ANDROID_HOME/cmdline-tools/$(ls "$ANDROID_HOME/cmdline-tools" | sort -V | tail -1)/bin/avdmanager" create avd --force -n screenerbot-ci --package "$SYSTEM_IMAGE" --device pixel_2
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           "$ANDROID_HOME/emulator/emulator" -port 5554 -avd screenerbot-ci -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel off > /tmp/screenerbot-emulator.log 2>&1 &
