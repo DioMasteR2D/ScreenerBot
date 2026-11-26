@@ -114,6 +114,7 @@ pub async fn boot() {
         #[cfg(target_os = "android")]
         {
             crate::android::record_startup_error(detail);
+            crate::android::record_startup_stage("Startup failed");
             return;
         }
         #[cfg(not(target_os = "android"))]
