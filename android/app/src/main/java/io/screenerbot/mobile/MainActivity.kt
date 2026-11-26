@@ -1,44 +1,41 @@
 package io.screenerbot.mobile
 
-import android.Manifest
 import android.app.Activity
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.Gravity
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.concurrent.Executors
 
+/**
+ * Android shell for the Render-hosted ScreenerBot instance.
+ *
+ * The trading engine and dashboard run on Render. This Activity is a secure
+ * HTTPS WebView client; it deliberately does not start a second local engine.
+ */
 class MainActivity : Activity() {
-    private val handler = Handler(Looper.getMainLooper())
-    private val executor = Executors.newSingleThreadExecutor()
+    companion object {
+        private const val DASHBOARD_URL = "https://solana-hunter-screenerbot.onrender.com/"
+    }
+
     private lateinit var status: TextView
-    private var attempts = 0
+    private lateinit var retry: Button
+    private var webView: WebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestNotificationPermission()
-        showStartupScreen()
-        startEngineService()
-        waitForDashboard()
+        showConnectionScreen()
+        connectToRender()
     }
 
-    private fun showStartupScreen() {
+    private fun showConnectionScreen() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -60,160 +57,92 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, 6, 0, 14)
         }
-        val artwork = ImageView(this).apply {
-            setImageResource(R.drawable.screenerbot_splash)
-            contentDescription = "ScreenerBot — ρομπότ τεχνητής νοημοσύνης και γραφήματα αγοράς"
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
-        }
         status = TextView(this).apply {
-            text = "Εκκίνηση της μηχανής ScreenerBot…"
+            text = "Σύνδεση με το ScreenerBot Cloud στο Render…"
             textSize = 14f
             setTextColor(0xFFB8C8D8.toInt())
             gravity = Gravity.CENTER
             setPadding(0, 18, 0, 18)
         }
-        val retry = Button(this).apply {
-            text = "Επανάληψη σύνδεσης"
-            setOnClickListener { attempts = 0; startEngineService(); waitForDashboard() }
+        retry = Button(this).apply {
+            text = "ΕΠΑΝΑΣΥΝΔΕΣΗ"
+            setOnClickListener { connectToRender() }
         }
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
-        root.addView(artwork, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(status, LinearLayout.LayoutParams(-1, -2))
         root.addView(retry, LinearLayout.LayoutParams(-1, -2))
         setContentView(root)
     }
 
-    private fun startEngineService() {
-        val intent = Intent(this, EngineService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
-        else startService(intent)
-    }
-
-    private fun waitForDashboard() {
-        attempts++
-        status.text = "Εκκίνηση της μηχανής ScreenerBot… ($attempts)"
-        executor.execute {
-            var probeDetail = "Δεν έχει ληφθεί ακόμη σύνδεση από τη μηχανή"
-            val connection = try {
-                NativeEngine.dashboardConnection()
-            } catch (error: Throwable) {
-                probeDetail = "JNI dashboardConnection: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
-                null
-            }
-            val session = connection?.split(":", limit = 2)
-            val port = session?.getOrNull(0)?.toIntOrNull()
-            val token = session?.getOrNull(1)
-            if (connection != null && (port == null || token.isNullOrBlank())) {
-                probeDetail = "Η JNI επέστρεψε μη έγκυρη θύρα ή token: $connection"
-            }
-            val ready = if (port != null && !token.isNullOrBlank()) {
-                try {
-                    val request = URL("http://127.0.0.1:$port/api/health")
-                        .openConnection() as HttpURLConnection
-                    request.connectTimeout = 2500
-                    request.readTimeout = 2500
-                    request.setRequestProperty("X-ScreenerBot-Token", token)
-                    val code = request.responseCode
-                    request.disconnect()
-                    probeDetail = "Τοπικό health check: HTTP $code"
-                    code in 200..299
-                } catch (error: Exception) {
-                    probeDetail = "Τοπικό health check απέτυχε: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
-                    false
-                }
-            } else false
-
-            val startupError = if (!ready) {
-                try { NativeEngine.startupError() } catch (_: Throwable) { null }
-            } else null
-            val diagnostics = try { NativeEngine.startupDiagnostics() } catch (_: Throwable) { null }
-
-            runOnUiThread {
-                if (ready && port != null && token != null) {
-                    openDashboard(port, token)
-                } else if (!startupError.isNullOrBlank()) {
-                    status.text = "Σφάλμα εκκίνησης: $startupError"
-                } else {
-                    status.text = "Εκκίνηση ScreenerBot… ($attempts)\n${diagnostics ?: "Δεν υπάρχουν ακόμη στοιχεία μηχανής"}\n$probeDetail"
-                    if (attempts < 120) {
-                        handler.postDelayed({ waitForDashboard() }, 1000)
-                    } else {
-                        status.text = "Η μηχανή δεν ανταποκρίνεται.\n${diagnostics ?: ""}\n$probeDetail"
-                    }
-                }
-            }
+    private fun connectToRender() {
+        runOnUiThread {
+            status.text = "Σύνδεση με Render…\nΑναμονή απόκρισης cloud server."
+            retry.isEnabled = false
         }
-    }
 
-    private fun openDashboard(port: Int, token: String) {
-        val origin = "http://127.0.0.1:$port"
-        webView = WebView(this).apply {
+        val remote = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.loadsImagesAutomatically = true
+            settings.javaScriptCanOpenWindowsAutomatically = false
             webChromeClient = WebChromeClient()
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    status.text = "Φόρτωση ScreenerBot Cloud…"
+                }
 
-            // Match the desktop shell: inject the per-process session token only
-            // into same-origin API calls. It is never placed in the page URL.
-            val quotedToken = JSONObject.quote(token)
-            val script = """
-                (() => {
-                  const token = $quotedToken;
-                  const sameOrigin = (value) => {
-                    try { return new URL(value, location.href).origin === location.origin; }
-                    catch (_) { return false; }
-                  };
-                  const originalFetch = window.fetch.bind(window);
-                  window.fetch = function(input, init) {
-                    const value = typeof input === 'string' ? input : input.url;
-                    if (!sameOrigin(value)) return originalFetch(input, init);
-                    const sourceHeaders = init && init.headers
-                      ? init.headers
-                      : (input instanceof Request ? input.headers : undefined);
-                    const headers = new Headers(sourceHeaders);
-                    headers.set('X-ScreenerBot-Token', token);
-                    headers.set('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
-                    return originalFetch(input, { ...(init || {}), headers });
-                  };
-                  const originalOpen = XMLHttpRequest.prototype.open;
-                  const originalSend = XMLHttpRequest.prototype.send;
-                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-                    this.__screenerBotLocal = sameOrigin(url);
-                    return originalOpen.call(this, method, url, ...rest);
-                  };
-                  XMLHttpRequest.prototype.send = function(body) {
-                    if (this.__screenerBotLocal) {
-                      this.setRequestHeader('X-ScreenerBot-Token', token);
-                      this.setRequestHeader('Accept-Language', 'el-GR,el;q=0.9,en;q=0.8');
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    if (view === webView || webView == null) {
+                        retry.isEnabled = true
+                        setContentView(view, ViewGroup.LayoutParams(-1, -1))
                     }
-                    return originalSend.call(this, body);
-                  };
-                })();
-            """.trimIndent()
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                WebViewCompat.addDocumentStartJavaScript(this, script, setOf(origin))
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?
+                ) {
+                    super.onReceivedError(view, request, error)
+                    if (request?.isForMainFrame == true) {
+                        runOnUiThread {
+                            status.text = "Δεν ήταν δυνατή η σύνδεση με Render.\n${error?.description ?: "Έλεγξε τη σύνδεσή σου στο internet."}"
+                            retry.isEnabled = true
+                            setContentView(connectionScreen, ViewGroup.LayoutParams(-1, -1))
+                        }
+                    }
+                }
+
+                override fun onReceivedHttpError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    errorResponse: android.webkit.WebResourceResponse?
+                ) {
+                    super.onReceivedHttpError(view, request, errorResponse)
+                    if (request?.isForMainFrame == true && (errorResponse?.statusCode ?: 200) >= 500) {
+                        runOnUiThread {
+                            status.text = "Ο Render server επέστρεψε HTTP ${errorResponse?.statusCode}. Δοκίμασε ξανά."
+                            retry.isEnabled = true
+                        }
+                    }
+                }
             }
-            loadUrl("$origin/", mapOf("X-ScreenerBot-Token" to token, "Accept-Language" to "el-GR,el;q=0.9,en;q=0.8"))
         }
-        setContentView(webView, ViewGroup.LayoutParams(-1, -1))
+        webView = remote
+        CookieManager.getInstance().setAcceptCookie(true)
+        remote.loadUrl(DASHBOARD_URL, mapOf("Accept-Language" to "el-GR,el;q=0.9,en;q=0.8"))
     }
 
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2602)
-        }
-    }
+    private val connectionScreen: android.view.View
+        get() = (status.parent as? android.view.View) ?: status
 
     override fun onDestroy() {
+        webView?.stopLoading()
+        webView?.destroy()
+        webView = null
         super.onDestroy()
-        // The foreground service owns the engine lifecycle; closing this Activity
-        // must not stop background monitoring or trading services.
     }
-
-    private lateinit var webView: WebView
 }
