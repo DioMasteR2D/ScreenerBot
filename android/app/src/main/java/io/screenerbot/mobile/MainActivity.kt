@@ -27,6 +27,7 @@ class MainActivity : Activity() {
 
     private lateinit var status: TextView
     private lateinit var retry: Button
+    private lateinit var connectionScreen: LinearLayout
     private var webView: WebView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +69,7 @@ class MainActivity : Activity() {
             text = "ΕΠΑΝΑΣΥΝΔΕΣΗ"
             setOnClickListener { connectToRender() }
         }
+        connectionScreen = root
         root.addView(title, LinearLayout.LayoutParams(-1, -2))
         root.addView(subtitle, LinearLayout.LayoutParams(-1, -2))
         root.addView(status, LinearLayout.LayoutParams(-1, -2))
@@ -95,7 +97,7 @@ class MainActivity : Activity() {
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    if (view === webView || webView == null) {
+                    if (view != null && view === webView) {
                         retry.isEnabled = true
                         setContentView(view, ViewGroup.LayoutParams(-1, -1))
                     }
@@ -135,9 +137,6 @@ class MainActivity : Activity() {
         CookieManager.getInstance().setAcceptCookie(true)
         remote.loadUrl(DASHBOARD_URL, mapOf("Accept-Language" to "el-GR,el;q=0.9,en;q=0.8"))
     }
-
-    private val connectionScreen: android.view.View
-        get() = (status.parent as? android.view.View) ?: status
 
     override fun onDestroy() {
         webView?.stopLoading()
