@@ -29,6 +29,7 @@ class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var status: TextView
     private var attempts = 0
+    private var engineStartAttempted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +97,24 @@ class MainActivity : Activity() {
         status.text = "Εκκίνηση της μηχανής ScreenerBot… ($attempts)"
         executor.execute {
             var probeDetail = "Δεν έχει ληφθεί ακόμη σύνδεση από τη μηχανή"
+            if (!engineStartAttempted) {
+                try {
+                    val dataDirectory = filesDir.resolve("screenerbot")
+                    if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
+                        throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων")
+                    }
+                    val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
+                    if (machineIdentifier.isBlank()) {
+                        throw IllegalStateException("Το Android Keystore επέστρεψε κενό αναγνωριστικό")
+                    }
+                    val started = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
+                    if (!started) throw IllegalStateException("NativeEngine.start() επέστρεψε false")
+                    engineStartAttempted = true
+                    probeDetail = "Η τοπική μηχανή ξεκίνησε από το MainActivity"
+                } catch (error: Throwable) {
+                    probeDetail = "Αποτυχία εκκίνησης JNI: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
+                }
+            }
             val connection = try {
                 NativeEngine.dashboardConnection()
             } catch (error: Throwable) {
