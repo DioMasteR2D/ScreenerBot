@@ -104,6 +104,11 @@ jobs:
 
       - name: Run native engine smoke test on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # GitHub-hosted Linux runners may not expose KVM. Explicitly permit
+          # QEMU's TCG software CPU emulation instead of letting the emulator
+          # exit immediately with "Software CPU emulation (-accel off) is not supported".
+          ANDROID_I_WANT_MY_TCG: "yes"
         with:
           api-level: 35
           target: google_apis
