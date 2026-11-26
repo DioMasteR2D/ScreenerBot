@@ -1,6 +1,12 @@
 package io.screenerbot.mobile
 
 import android.os.SystemClock
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
+import androidx.test.core.app.ActivityScenario
+import android.webkit.WebView
+import android.view.ViewGroup
+import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -73,4 +79,85 @@ class NativeEngineSmokeTest {
         assertTrue("Local dashboard did not retain a valid port. $lastDiagnostics", port > 0)
         assertEquals("Expected authenticated local dashboard port", port, parts[0].toInt())
     }
+    @Test
+    fun launcherActivityLoadsWebViewDashboardAndAuthenticatedBootstrap() {
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
+            val deadline = SystemClock.elapsedRealtime() + 180_000L
+            var probeResult: String? = null
+            var lastPageState = "WebView not created yet"
+
+            while (SystemClock.elapsedRealtime() < deadline && probeResult == null) {
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+                val latch = CountDownLatch(1)
+                scenario.onActivity { activity ->
+                    val webView = findWebView(activity.window.decorView)
+                    if (webView == null) {
+                        lastPageState = "Launcher is showing startup screen"
+                        latch.countDown()
+                    } else {
+                        webView.evaluateJavascript(
+                            """
+                            (() => {
+                              if (document.readyState !== 'complete' || !document.body) {
+                                return JSON.stringify({state: document.readyState, body: false});
+                              }
+                              if (!window.__screenerBotBootstrapProbe) {
+                                window.__screenerBotBootstrapProbe = 'pending';
+                                fetch('/api/system/bootstrap', {credentials: 'same-origin'})
+                                  .then(async response => {
+                                    const body = await response.json();
+                                    document.documentElement.dataset.screenerbotBootstrap =
+                                      JSON.stringify({status: response.status, keys: Object.keys(body),
+                                        hasUiReady: Object.prototype.hasOwnProperty.call(body, 'ui_ready'),
+                                        hasPhase: Object.prototype.hasOwnProperty.call(body, 'phase'),
+                                        bodyText: document.body.innerText.slice(0, 300)});
+                                  })
+                                  .catch(error => {
+                                    document.documentElement.dataset.screenerbotBootstrap =
+                                      JSON.stringify({error: String(error)});
+                                  });
+                              }
+                              return document.documentElement.dataset.screenerbotBootstrap || 'pending';
+                            })()
+                            """.trimIndent()
+                        ) { value ->
+                            val decoded = value?.removeSurrounding("\"", "\"")?.replace("\\\"", "\"")
+                            if (!decoded.isNullOrBlank() && decoded != "pending" && decoded != "null") {
+                                probeResult = decoded
+                            } else {
+                                lastPageState = "WebView loaded; waiting for authenticated bootstrap response"
+                            }
+                            latch.countDown()
+                        }
+                    }
+                }
+                latch.await(2, TimeUnit.SECONDS)
+                if (probeResult == null) SystemClock.sleep(1000)
+            }
+
+            assertNotNull(
+                "Launcher did not load dashboard and receive /api/system/bootstrap. Last state: $lastPageState",
+                probeResult
+            )
+            val result = probeResult!!
+            assertTrue("Bootstrap did not return HTTP 200: $result", result.contains("\"status\":200"))
+            assertTrue("Bootstrap response missing ui_ready: $result", result.contains("\"hasUiReady\":true"))
+            assertTrue("Bootstrap response missing phase: $result", result.contains("\"hasPhase\":true"))
+        } finally {
+            scenario.close()
+        }
+    }
+
+    private fun findWebView(view: View): WebView? {
+        if (view is WebView) return view
+        if (view is ViewGroup) {
+            for (index in 0 until view.childCount) {
+                val found = findWebView(view.getChildAt(index))
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
 }
