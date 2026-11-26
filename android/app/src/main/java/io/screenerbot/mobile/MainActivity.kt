@@ -95,25 +95,32 @@ class MainActivity : Activity() {
         attempts++
         status.text = "Εκκίνηση της μηχανής ScreenerBot… ($attempts)"
         executor.execute {
+            var probeDetail = "Δεν έχει ληφθεί ακόμη σύνδεση από τη μηχανή"
             val connection = try {
                 NativeEngine.dashboardConnection()
-            } catch (_: Throwable) {
+            } catch (error: Throwable) {
+                probeDetail = "JNI dashboardConnection: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
                 null
             }
             val session = connection?.split(":", limit = 2)
             val port = session?.getOrNull(0)?.toIntOrNull()
             val token = session?.getOrNull(1)
+            if (connection != null && (port == null || token.isNullOrBlank())) {
+                probeDetail = "Η JNI επέστρεψε μη έγκυρη θύρα ή token: $connection"
+            }
             val ready = if (port != null && !token.isNullOrBlank()) {
                 try {
                     val request = URL("http://127.0.0.1:$port/api/health")
                         .openConnection() as HttpURLConnection
-                    request.connectTimeout = 1500
-                    request.readTimeout = 1500
+                    request.connectTimeout = 2500
+                    request.readTimeout = 2500
                     request.setRequestProperty("X-ScreenerBot-Token", token)
                     val code = request.responseCode
                     request.disconnect()
+                    probeDetail = "Τοπικό health check: HTTP $code"
                     code in 200..299
-                } catch (_: Exception) {
+                } catch (error: Exception) {
+                    probeDetail = "Τοπικό health check απέτυχε: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
                     false
                 }
             } else false
@@ -121,16 +128,20 @@ class MainActivity : Activity() {
             val startupError = if (!ready) {
                 try { NativeEngine.startupError() } catch (_: Throwable) { null }
             } else null
+            val diagnostics = try { NativeEngine.startupDiagnostics() } catch (_: Throwable) { null }
 
             runOnUiThread {
                 if (ready && port != null && token != null) {
                     openDashboard(port, token)
                 } else if (!startupError.isNullOrBlank()) {
                     status.text = "Σφάλμα εκκίνησης: $startupError"
-                } else if (attempts < 120) {
-                    handler.postDelayed({ waitForDashboard() }, 1000)
                 } else {
-                    status.text = "Η μηχανή δεν ανταποκρίνεται. Πάτησε επανάληψη για νέα προσπάθεια."
+                    status.text = "Εκκίνηση ScreenerBot… ($attempts)\n${diagnostics ?: "Δεν υπάρχουν ακόμη στοιχεία μηχανής"}\n$probeDetail"
+                    if (attempts < 120) {
+                        handler.postDelayed({ waitForDashboard() }, 1000)
+                    } else {
+                        status.text = "Η μηχανή δεν ανταποκρίνεται.\n${diagnostics ?: ""}\n$probeDetail"
+                    }
                 }
             }
         }
