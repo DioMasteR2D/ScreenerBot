@@ -115,9 +115,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: |
-            cd android
-            gradle --no-daemon connectedDebugAndroidTest
+          script: cd android && gradle --no-daemon connectedDebugAndroidTest
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
