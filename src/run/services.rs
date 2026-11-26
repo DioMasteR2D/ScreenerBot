@@ -110,6 +110,8 @@ pub(super) async fn create_and_start_services(mode_label: &str) -> Result<()> {
     // Only an essential service stops startup here. Any other failure, a service
     // whose store could not be opened among them, is already logged and reported as
     // that service's health, and the rest of the app runs without it.
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Starting local dashboard and services");
     let started = service_manager.start_all().await;
 
     {
@@ -125,6 +127,8 @@ pub(super) async fn create_and_start_services(mode_label: &str) -> Result<()> {
     // it only after startup has finished and the manager is back in global
     // state, so every dashboard route sees the complete graph.
     crate::webserver::announce_gui_ready();
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Dashboard and services started");
 
     // Ledger and vault stores are snapshotted once the app is ready and again on a
     // schedule while they change.
