@@ -22,26 +22,31 @@ class EngineService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= 34) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
-
         try {
+            val notification = buildNotification()
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+
             val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
             if (!NativeEngine.start(filesDir.resolve("screenerbot").absolutePath, machineIdentifier)) {
-                updateNotification("Αποτυχία αρχικοποίησης της μηχανής. Έλεγξε τα αρχεία καταγραφής.")
+                updateNotification("Αποτυχία αρχικοποίησης της μηχανής. Άνοιξε την εφαρμογή για λεπτομέρειες.")
             }
         } catch (error: UnsatisfiedLinkError) {
-            updateNotification("Λείπει η βιβλιοθήκη της μηχανής. Χρειάζεται νέα έκδοση της εφαρμογής.")
+            updateNotification("Λείπει η βιβλιοθήκη της μηχανής. Χρειάζεται νέα έκδοση.")
+            stopSelf(startId)
+        } catch (error: SecurityException) {
+            updateNotification("Το Android μπλόκαρε την υπηρεσία παρασκηνίου: ${error.message ?: "άγνωστο"}")
+            stopSelf(startId)
         } catch (error: Exception) {
-            updateNotification("Σφάλμα εκκίνησης μηχανής: ${error.message ?: "άγνωστο"}")
+            updateNotification("Σφάλμα υπηρεσίας: ${error.message ?: error.javaClass.simpleName}")
+            stopSelf(startId)
         }
         return START_STICKY
     }
