@@ -63,7 +63,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.98.1
-          targets: aarch64-linux-android
+          targets: aarch64-linux-android,x86_64-linux-android
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -105,3 +105,18 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      # Exercise the JNI engine on an Android emulator; the phone APK above remains ARM64-only.
+      - name: Build emulator-only x86_64 native engine
+        run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
+
+      - name: Run native engine smoke test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            cd android
+            gradle --no-daemon connectedDebugAndroidTest
