@@ -29,6 +29,8 @@ use crate::{
 
 /// Main bot execution function — handles the full bot lifecycle with ServiceManager.
 pub async fn run_bot() -> Result<()> {
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Preparing application directories");
     // 0. Initialize profiling if requested (must be done before any tokio tasks)
     profiling::init_profiling();
 
@@ -39,6 +41,9 @@ pub async fn run_bot() -> Result<()> {
             error,
         ))
     })?;
+
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Acquiring process lock");
 
     // 2. Acquire process lock to prevent multiple instances
     let process_lock = ProcessLock::acquire().map_err(|error| match error {
@@ -57,6 +62,8 @@ pub async fn run_bot() -> Result<()> {
 
 /// Internal bot execution with pre-acquired lock.
 async fn run_bot_internal(_process_lock: ProcessLock) -> Result<()> {
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Initializing runtime services");
     logger::info(LogTag::System, "ScreenerBot starting up...");
 
     // 1. Set GUI mode if --gui flag is present (must be done early for webserver security)
@@ -114,6 +121,8 @@ async fn run_bot_internal(_process_lock: ProcessLock) -> Result<()> {
     let config_exists = config_path.exists();
 
     // 5. The storage phase, under the process lock and before any service reads a store.
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Opening local databases");
     storage::run_storage_phase(crate::arguments::is_clean_wallet_data_enabled())
         .await
         .map_err(Error::Startup)?;
@@ -126,6 +135,8 @@ async fn run_bot_internal(_process_lock: ProcessLock) -> Result<()> {
 
     // Dashboard-owned persistence is independent of wallet/RPC setup. Routes
     // for actions, analysis instructions, and Assistant chat exist in every dashboard mode.
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Preparing dashboard storage");
     bootstrap::initialize_dashboard_persistence().await?;
 
     if !config_exists {
@@ -143,6 +154,8 @@ async fn run_bot_internal(_process_lock: ProcessLock) -> Result<()> {
 
         // Register every service; only the webserver is enabled before setup.
         services::create_and_start_services("").await?;
+        #[cfg(target_os = "android")]
+        crate::android::record_startup_stage("Local dashboard service started");
 
         logger::info(
             LogTag::System,
