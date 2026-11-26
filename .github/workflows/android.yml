@@ -109,6 +109,8 @@ jobs:
         timeout-minutes: 30
         run: |
           set -euo pipefail
+          ADB="$ANDROID_HOME/platform-tools/adb"
+          test -x "$ADB"
           SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
           # sdkmanager exits successfully after accepting the prompt; `yes` then gets SIGPIPE.
@@ -121,15 +123,15 @@ jobs:
           "$ANDROID_HOME/emulator/emulator" -port 5554 -avd screenerbot-ci -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel off > /tmp/screenerbot-emulator.log 2>&1 &
           EMULATOR_PID=$!
           cleanup() {
-            adb -s emulator-5554 emu kill >/dev/null 2>&1 || true
+            "$ADB" -s emulator-5554 emu kill >/dev/null 2>&1 || true
             kill "$EMULATOR_PID" >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
-          adb start-server
-          adb -s emulator-5554 wait-for-device
+          "$ADB" start-server
+          "$ADB" -s emulator-5554 wait-for-device
           echo "Waiting for Android boot..."
           for i in $(seq 1 600); do
-            BOOT="$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            BOOT="$("$ADB" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
             if [ "$BOOT" = "1" ]; then break; fi
             if [ "$i" -eq 600 ]; then
               cat /tmp/screenerbot-emulator.log
@@ -140,7 +142,7 @@ jobs:
           done
           echo "Waiting for Android input service..."
           for i in $(seq 1 120); do
-            if adb -s emulator-5554 shell service check input 2>&1 | grep -q "found"; then break; fi
+            if "$ADB" -s emulator-5554 shell service check input 2>&1 | grep -q "found"; then break; fi
             if [ "$i" -eq 120 ]; then
               cat /tmp/screenerbot-emulator.log
               echo "Android input service did not become available" >&2
@@ -148,10 +150,10 @@ jobs:
             fi
             sleep 2
           done
-          adb -s emulator-5554 shell input keyevent 82
-          adb -s emulator-5554 shell settings put global window_animation_scale 0.0
-          adb -s emulator-5554 shell settings put global transition_animation_scale 0.0
-          adb -s emulator-5554 shell settings put global animator_duration_scale 0.0
+          "$ADB" -s emulator-5554 shell input keyevent 82
+          "$ADB" -s emulator-5554 shell settings put global window_animation_scale 0.0
+          "$ADB" -s emulator-5554 shell settings put global transition_animation_scale 0.0
+          "$ADB" -s emulator-5554 shell settings put global animator_duration_scale 0.0
           cd android
           gradle --no-daemon connectedDebugAndroidTest
 
