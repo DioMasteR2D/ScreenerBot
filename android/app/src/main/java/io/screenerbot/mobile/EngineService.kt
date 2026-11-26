@@ -34,29 +34,14 @@ class EngineService : Service() {
                 startForeground(NOTIFICATION_ID, notification)
             }
 
-            recordStartup("Preparing local Android data directory")
-            val dataDirectory = filesDir.resolve("screenerbot")
-            if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
-                throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων: ${dataDirectory.absolutePath}")
-            }
-
-            recordStartup("Creating Android Keystore identity")
-            val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
-            if (machineIdentifier.isBlank()) {
-                throw IllegalStateException("Το Android Keystore επέστρεψε κενό αναγνωριστικό συσκευής")
-            }
-
-            recordStartup("Calling local native Rust engine")
-            val started = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
-            if (!started) {
-                throw IllegalStateException("NativeEngine.start() επέστρεψε false. Η JNI δεν ξεκίνησε την τοπική μηχανή.")
-            }
-            recordStartup("Native engine accepted startup")
-            updateNotification("Η τοπική μηχανή ScreenerBot ξεκίνησε")
+            // The Activity owns the JNI engine in its process. This foreground
+            // service only keeps the Android process eligible to run in background.
+            recordStartup("Foreground service active; engine owned by MainActivity process")
+            updateNotification("Η τοπική μηχανή λειτουργεί στο Android")
         } catch (error: Throwable) {
             val detail = "${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
-            recordStartup("FAILED", detail)
-            updateNotification("Αποτυχία τοπικής μηχανής: $detail")
+            recordStartup("FOREGROUND SERVICE FAILED", detail)
+            updateNotification("Αποτυχία υπηρεσίας Android: $detail")
             stopSelf(startId)
         }
         return START_STICKY
