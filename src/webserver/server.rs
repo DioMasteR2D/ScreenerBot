@@ -277,6 +277,8 @@ pub async fn start_server(port_override: Option<u16>, host_override: Option<Stri
         },
     })?;
     report_startup(Ok(()));
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage(format!("Dashboard listener bound on {addr}"));
 
     logger::debug(
         LogTag::Webserver,
