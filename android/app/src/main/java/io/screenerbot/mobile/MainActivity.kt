@@ -136,11 +136,22 @@ class MainActivity : Activity() {
                 } else if (!startupError.isNullOrBlank()) {
                     status.text = "Σφάλμα εκκίνησης: $startupError"
                 } else {
-                    status.text = "Εκκίνηση ScreenerBot… ($attempts)\n${diagnostics ?: "Δεν υπάρχουν ακόμη στοιχεία μηχανής"}\n$probeDetail"
+                    val servicePrefs = getSharedPreferences("engine_startup", MODE_PRIVATE)
+                    val serviceStage = servicePrefs.getString("stage", "Service not reported")
+                    val serviceError = servicePrefs.getString("error", "").orEmpty()
+                    val serviceDiagnostics = if (serviceError.isNotBlank()) {
+                        "Android service: $serviceStage — $serviceError"
+                    } else {
+                        "Android service: $serviceStage"
+                    }
+                    status.text = "Εκκίνηση ScreenerBot… ($attempts)\n$serviceDiagnostics\n${diagnostics ?: "Δεν υπάρχουν ακόμη στοιχεία μηχανής"}\n$probeDetail"
                     if (attempts < 120) {
                         handler.postDelayed({ waitForDashboard() }, 1000)
                     } else {
-                        status.text = "Η μηχανή δεν ανταποκρίνεται.\n${diagnostics ?: ""}\n$probeDetail"
+                        val servicePrefs = getSharedPreferences("engine_startup", MODE_PRIVATE)
+                        val serviceStage = servicePrefs.getString("stage", "Service not reported")
+                        val serviceError = servicePrefs.getString("error", "").orEmpty()
+                        status.text = "Η μηχανή δεν ανταποκρίνεται.\nAndroid service: $serviceStage\n$serviceError\n${diagnostics ?: ""}\n$probeDetail"
                     }
                 }
             }
