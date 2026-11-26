@@ -13,6 +13,13 @@ use std::sync::{Mutex, OnceLock};
 
 static STARTED: AtomicBool = AtomicBool::new(false);
 static STARTUP_ERROR: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+static STARTUP_STAGE: OnceLock<Mutex<String>> = OnceLock::new();
+
+pub(crate) fn record_startup_stage(message: impl Into<String>) {
+    if let Ok(mut stage) = STARTUP_STAGE.get_or_init(|| Mutex::new("Starting".to_owned())).lock() {
+        *stage = message.into();
+    }
+}
 
 pub(crate) fn record_startup_error(message: impl Into<String>) {
     if let Ok(mut error) = STARTUP_ERROR.get_or_init(|| Mutex::new(None)).lock() {
@@ -59,6 +66,7 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     if let Ok(mut error) = STARTUP_ERROR.get_or_init(|| Mutex::new(None)).lock() {
         *error = None;
     }
+    record_startup_stage("Preparing native engine");
 
     std::env::set_var("SCREENERBOT_DATA_DIR", directory);
     std::env::set_var("SCREENERBOT_ANDROID_MACHINE_ID", identifier);
@@ -70,14 +78,26 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_start(
     let worker = std::thread::Builder::new()
         .name("screenerbot-engine".to_owned())
         .spawn(|| {
-            let runtime = tokio::runtime::Builder::new_multi_thread()
+            record_startup_stage("Creating Tokio runtime");
+            let runtime = match tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .max_blocking_threads(4)
                 .enable_all()
                 .thread_name("screenerbot-runtime")
                 .build()
-                .expect("could not create ScreenerBot Tokio runtime");
+            {
+                Ok(runtime) => runtime,
+                Err(error) => {
+                    record_startup_error(format!("Tokio runtime creation failed: {error}"));
+                    STARTED.store(false, Ordering::SeqCst);
+                    return;
+                }
+            };
             // Run on a dedicated native thread so the engine boot future does
             // not need to satisfy Tokio's Send bound for Runtime::spawn.
+            record_startup_stage("Starting ScreenerBot core");
             runtime.block_on(crate::run::boot());
+            record_startup_stage("Engine stopped");
             STARTED.store(false, Ordering::SeqCst);
         });
 
@@ -121,5 +141,23 @@ pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_startupError(
     match message.and_then(|value| env.new_string(value).ok()) {
         Some(value) => value.into_raw(),
         None => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_io_screenerbot_mobile_NativeEngine_startupDiagnostics(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let stage = STARTUP_STAGE.get_or_init(|| Mutex::new("Not started".to_owned()))
+        .lock().map(|value| value.clone()).unwrap_or_else(|_| "Stage unavailable".to_owned());
+    let error = STARTUP_ERROR.get_or_init(|| Mutex::new(None))
+        .lock().ok().and_then(|value| value.clone()).unwrap_or_default();
+    let port = crate::global::get_webserver_port();
+    let token_ready = crate::global::get_security_token().is_some();
+    let message = format!("stage={stage}; port={port}; token_ready={token_ready}; error={error}");
+    match env.new_string(message) {
+        Ok(value) => value.into_raw(),
+        Err(_) => std::ptr::null_mut(),
     }
 }
