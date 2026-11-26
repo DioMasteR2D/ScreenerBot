@@ -103,7 +103,7 @@ jobs:
         run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
 
       - name: Run native engine smoke test on Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@ab495a9b42f2af30f5222bd978136f9b0a85b68a
         env:
           # GitHub-hosted Linux runners may not expose KVM. Explicitly permit
           # QEMU's TCG software CPU emulation instead of letting the emulator
