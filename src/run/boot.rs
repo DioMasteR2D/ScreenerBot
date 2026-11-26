@@ -17,6 +17,8 @@ pub async fn boot() {
     #[cfg(target_os = "android")]
     crate::android::record_startup_stage("Boot sequence started");
     crate::net::install_tls_crypto_provider();
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("TLS provider installed");
 
     // Store command line arguments. Android uses the same secured GUI-mode
     // listener as the desktop shell: dynamic loopback port plus session token.
@@ -24,6 +26,8 @@ pub async fn boot() {
     #[cfg(target_os = "android")]
     command_args.push("--gui".to_owned());
     set_cmd_args(command_args);
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Command arguments initialized");
 
     // MCP is a protocol subprocess. It must run before the banner, logger, or
     // config boot so stdout is exclusively JSON-RPC framing.
@@ -48,10 +52,14 @@ pub async fn boot() {
         return;
     }
 
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Initializing logger");
     print_banner();
 
     // Initialize logger
     crate::logger::init();
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Logger initialized");
     logger::info(
         LogTag::System,
         "Logger initialized, attempting to load config...",
@@ -68,6 +76,8 @@ pub async fn boot() {
     #[cfg(not(target_os = "android"))]
     let should_load_config = true;
 
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Checking Android configuration");
     if should_load_config {
         if let Err(e) = load_config() {
             let detail = e.to_string();
@@ -92,6 +102,8 @@ pub async fn boot() {
     // Detect and log the system/network proxy once (used by HTTP, RPC and WS).
     // Must run AFTER config load so `[network] proxy` is available.
     crate::net::log_detected_proxy();
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Network initialized");
 
     // Set up panic hook for crash notifications (after config is loaded)
     crate::process::panic_hook::install();
@@ -101,6 +113,8 @@ pub async fn boot() {
     crate::android::record_startup_stage("Entering bot startup");
 
     // Set up shutdown signal handler
+    #[cfg(target_os = "android")]
+    crate::android::record_startup_stage("Starting bot lifecycle");
     super::shutdown::spawn_initial_ctrl_c_listener();
 
     // Run the bot in headless mode. On a fatal startup failure, surface a
