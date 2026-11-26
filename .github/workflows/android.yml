@@ -98,13 +98,6 @@ jobs:
           "$AAPT" dump badging "$APK" > /tmp/screenerbot-apk-badging.txt
           head -n 5 /tmp/screenerbot-apk-badging.txt
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: ScreenerBot-Android-ARM64-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 30
       # Exercise the JNI engine on an Android emulator; the phone APK above remains ARM64-only.
       - name: Build emulator-only x86_64 native engine
         run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
@@ -120,3 +113,11 @@ jobs:
           script: |
             cd android
             gradle --no-daemon connectedDebugAndroidTest
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScreenerBot-Android-ARM64-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
