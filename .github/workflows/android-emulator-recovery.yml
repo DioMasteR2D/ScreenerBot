@@ -1,0 +1,166 @@
+name: Android emulator recovery
+
+on:
+  push:
+    branches:
+      - android/mobile-app-bootstrap
+    paths:
+      - ".github/workflows/android-emulator-recovery.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: android-emulator-recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  emulator-smoke-test:
+    name: Resume emulator test using existing APK artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK and NDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name sdkmanager -print -quit)"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses >/dev/null
+          set -o pipefail
+          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "emulator" "system-images;android-35;google_apis;x86_64"
+
+      - name: Configure Android NDK
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.98.1
+          targets: x86_64-linux-android
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: android-arm64
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Download already-built ARM64 APK from run 82
+        uses: actions/download-artifact@v4
+        with:
+          name: ScreenerBot-Android-ARM64-debug
+          run-id: 45999055132
+          github-token: ${{ github.token }}
+          path: android/app/build/outputs/apk/debug
+
+      - name: Verify reused APK
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | head -n 5
+
+      - name: Build emulator-only x86_64 native engine
+        run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
+
+      - name: Run bounded Android emulator smoke test
+        env:
+          ANDROID_I_WANT_MY_TCG: "yes"
+        shell: bash
+        timeout-minutes: 35
+        run: |
+          set -euo pipefail
+          ADB="$ANDROID_HOME/platform-tools/adb"
+          EMULATOR="$ANDROID_HOME/emulator/emulator"
+          AVDMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -maxdepth 3 -type f -name avdmanager -print -quit)"
+          SYSTEM_IMAGE="system-images;android-35;google_apis;x86_64"
+          test -x "$ADB"
+          test -x "$EMULATOR"
+          echo no | "$AVDMANAGER" create avd --force -n screenerbot-ci -k "$SYSTEM_IMAGE" --device pixel_2
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
+          "$EMULATOR" -port 5554 -avd screenerbot-ci -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel off > /tmp/screenerbot-emulator.log 2>&1 &
+          EMULATOR_PID=$!
+          cleanup() {
+            "$ADB" -s emulator-5554 emu kill >/dev/null 2>&1 || true
+            kill "$EMULATOR_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          "$ADB" start-server
+
+          echo "Waiting up to 180 seconds for emulator ADB registration..."
+          DEVICE_READY=0
+          for i in $(seq 1 90); do
+            if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+              echo "Emulator process exited before ADB registration" >&2
+              cat /tmp/screenerbot-emulator.log
+              exit 1
+            fi
+            if "$ADB" devices | grep -q '^emulator-5554[[:space:]]*device$'; then
+              DEVICE_READY=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$DEVICE_READY" -ne 1 ]; then
+            echo "Emulator did not register with ADB within 180 seconds" >&2
+            "$ADB" devices -l || true
+            cat /tmp/screenerbot-emulator.log
+            exit 1
+          fi
+
+          echo "Waiting up to 300 seconds for Android boot..."
+          BOOT_READY=0
+          for i in $(seq 1 150); do
+            BOOT="$("$ADB" -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+            if [ "$BOOT" = "1" ]; then BOOT_READY=1; break; fi
+            if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+              echo "Emulator exited during Android boot" >&2
+              cat /tmp/screenerbot-emulator.log
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$BOOT_READY" -ne 1 ]; then
+            echo "Android boot timed out" >&2
+            cat /tmp/screenerbot-emulator.log
+            "$ADB" devices -l || true
+            exit 1
+          fi
+
+          echo "Waiting for Android input service..."
+          INPUT_READY=0
+          for i in $(seq 1 60); do
+            if "$ADB" -s emulator-5554 shell service check input 2>&1 | grep -q "found"; then INPUT_READY=1; break; fi
+            sleep 2
+          done
+          if [ "$INPUT_READY" -ne 1 ]; then
+            echo "Android input service unavailable" >&2
+            cat /tmp/screenerbot-emulator.log
+            exit 1
+          fi
+
+          "$ADB" -s emulator-5554 shell input keyevent 82
+          "$ADB" -s emulator-5554 shell settings put global window_animation_scale 0.0
+          "$ADB" -s emulator-5554 shell settings put global transition_animation_scale 0.0
+          "$ADB" -s emulator-5554 shell settings put global animator_duration_scale 0.0
+          cd android
+          gradle --no-daemon connectedDebugAndroidTest
