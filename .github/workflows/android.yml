@@ -43,12 +43,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Cache Android emulator system image
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/lib/android/sdk/system-images/android-35/google_apis/x86_64
-          key: android-emulator-api35-google-apis-x86_64-v1
-
       - name: Install Android SDK and NDK packages
         shell: bash
         run: |
@@ -118,6 +112,12 @@ jobs:
     needs: build-android
     timeout-minutes: 40
     steps:
+      - name: Cache Android emulator system image
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-35/google_apis/x86_64
+          key: android-emulator-api35-google-apis-x86_64-v1
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -167,9 +167,6 @@ jobs:
         with:
           name: ScreenerBot-Android-ARM64-debug
           path: android/app/build/outputs/apk/debug
-
-      - name: Build emulator-only x86_64 native engine
-        run: cargo ndk -t x86_64 -o android/app/src/main/jniLibs build --release --lib --no-default-features
 
       # Exercise the JNI engine on an Android emulator; the phone APK above remains ARM64-only.
       - name: Build emulator-only x86_64 native engine
