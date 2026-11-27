@@ -43,6 +43,12 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Cache Android emulator system image
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/lib/android/sdk/system-images/android-35/google_apis/x86_64
+          key: android-emulator-api35-google-apis-x86_64-v1
+
       - name: Install Android SDK and NDK packages
         shell: bash
         run: |
@@ -131,12 +137,6 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null
           set -o pipefail
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "emulator" "system-images;android-35;google_apis;x86_64"
-
-      - name: Cache Android emulator system image
-        uses: actions/cache@v4
-        with:
-          path: /usr/local/lib/android/sdk/system-images/android-35/google_apis/x86_64
-          key: android-emulator-api35-google-apis-x86_64-v1
 
       - name: Configure Android NDK
         run: |
