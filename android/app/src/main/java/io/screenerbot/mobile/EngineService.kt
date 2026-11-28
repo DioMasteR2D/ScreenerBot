@@ -34,10 +34,9 @@ class EngineService : Service() {
                 startForeground(NOTIFICATION_ID, notification)
             }
 
-            // The Activity owns the JNI engine in its process. This foreground
-            // service only keeps the Android process eligible to run in background.
-            recordStartup("Foreground service active; engine owned by MainActivity process")
-            updateNotification("Η τοπική μηχανή λειτουργεί στο Android")
+            // The foreground service is the single owner of native engine startup.
+            // START_STICKY also re-enters this path if Android recreates the service.
+            startNativeEngine()
         } catch (error: Throwable) {
             val detail = "${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
             recordStartup("FOREGROUND SERVICE FAILED", detail)
@@ -45,6 +44,29 @@ class EngineService : Service() {
             stopSelf(startId)
         }
         return START_STICKY
+    }
+
+    private fun startNativeEngine() {
+        recordStartup("Preparing private engine data directory")
+        val dataDirectory = filesDir.resolve("screenerbot")
+        if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
+            throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων")
+        }
+
+        recordStartup("Unlocking Android Keystore device identity")
+        val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
+        check(machineIdentifier.isNotBlank()) {
+            "Το Android Keystore επέστρεψε κενό αναγνωριστικό"
+        }
+
+        recordStartup("Loading native Rust engine")
+        val started = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
+        check(started) {
+            "Η JNI δεν μπόρεσε να δημιουργήσει το νήμα της μηχανής. ${NativeEngine.startupDiagnostics() ?: ""}"
+        }
+
+        recordStartup("Native engine thread accepted; waiting for authenticated local dashboard")
+        updateNotification("Η τοπική μηχανή ξεκινά στο Android")
     }
 
     private fun recordStartup(stage: String, error: String? = null) {
