@@ -29,17 +29,14 @@ class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var status: TextView
     private var attempts = 0
-    private var engineStartAttempted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestNotificationPermission()
         showStartupScreen()
         startEngineService()
-        // Start JNI from the Activity's Android process before any background
-        // executor work. The native entry point immediately creates its own
-        // engine thread; the Activity then polls the real local listener.
-        startLocalEngine()
+        // The foreground service owns the native engine lifecycle. The Activity
+        // only observes the authenticated loopback listener and opens the dashboard.
         waitForDashboard()
     }
 
@@ -83,7 +80,6 @@ class MainActivity : Activity() {
             setOnClickListener {
             attempts = 0
             startEngineService()
-            startLocalEngine()
             waitForDashboard()
         }
         }
@@ -99,27 +95,6 @@ class MainActivity : Activity() {
         val intent = Intent(this, EngineService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
-    }
-
-    private fun startLocalEngine() {
-        try {
-            val dataDirectory = filesDir.resolve("screenerbot")
-            if (!dataDirectory.exists() && !dataDirectory.mkdirs()) {
-                throw IllegalStateException("Δεν δημιουργήθηκε ο τοπικός φάκελος δεδομένων")
-            }
-            val machineIdentifier = AndroidIdentity.getOrCreateMachineIdentifier(this)
-            if (machineIdentifier.isBlank()) {
-                throw IllegalStateException("Το Android Keystore επέστρεψε κενό αναγνωριστικό")
-            }
-            engineStartAttempted = NativeEngine.start(dataDirectory.absolutePath, machineIdentifier)
-            if (!engineStartAttempted) {
-                status.text = "Η JNI δεν ξεκίνησε τη μηχανή. ${NativeEngine.startupDiagnostics() ?: ""}"
-            } else {
-                status.text = "Η τοπική μηχανή ξεκινά στο Android…"
-            }
-        } catch (error: Throwable) {
-            status.text = "Αποτυχία εκκίνησης JNI: ${error.javaClass.simpleName}: ${error.message ?: "χωρίς λεπτομέρειες"}"
-        }
     }
 
     private fun waitForDashboard() {
